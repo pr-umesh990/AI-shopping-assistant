@@ -1,0 +1,28 @@
+/* admin.css — Admin-specific styles */
+
+/* Admin table hover */
+.admin-table-row-hover:hover { background: var(--primary-50) !important; }
+
+/* Analytics numbers */
+.analytics-big-num {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+}
+
+/* Drag handles for reordering */
+.drag-handle { cursor: grab; color: var(--gray-400); }
+.drag-handle:active { cursor: grabbing; }
+
+/* Admin notification badge */
+.admin-notif-badge {
+  background: var(--danger);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
