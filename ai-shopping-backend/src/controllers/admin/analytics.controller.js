@@ -61,7 +61,7 @@ export const getRevenueByCategory = asyncHandler(async (req, res) => {
     { $sort: { revenue: -1 } },
   ]);
 
-  return successResponse(res, 200, 'Revenue by category retrieved.', { data: results });
+  return successResponse(res, 200, 'Revenue by category retrieved.', { categories: results });
 });
 
 /**
@@ -77,7 +77,7 @@ export const getTrafficChannels = asyncHandler(async (req, res) => {
     { channel: 'Email', percentage: 4 },
   ];
 
-  return successResponse(res, 200, 'Traffic channels retrieved.', { data });
+  return successResponse(res, 200, 'Traffic channels retrieved.', { channels: data });
 });
 
 /**

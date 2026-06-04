@@ -61,21 +61,17 @@ export const getStats = asyncHandler(async (req, res) => {
     : catalogSize > 0 ? 100 : 0;
 
   return successResponse(res, 200, 'Dashboard stats retrieved.', {
-    totalRevenue: {
-      value: totalRevenue,
-      change: revenueChange,
-    },
-    affiliateClicks: {
-      value: currentMonthClicks,
-      change: clicksChange,
-    },
-    activeUsers: {
-      value: activeUsers,
-      change: usersChange,
-    },
-    catalogSize: {
-      value: catalogSize,
-      change: catalogChange,
+    totalRevenue,
+    revenueChange,
+    totalClicks: currentMonthClicks,
+    clicksChange,
+    activeUsers,
+    usersChange,
+    totalProducts: catalogSize,
+    productsChange: catalogChange,
+    affiliateMilestone: {
+      current: totalRevenue,
+      target: config.MONTHLY_AFFILIATE_GOAL,
     },
   });
 });

@@ -42,7 +42,10 @@ export const getProducts = asyncHandler(async (req, res) => {
     { createdAt: -1 }
   );
 
-  return successResponse(res, 200, 'Admin products retrieved.', result);
+  return successResponse(res, 200, 'Admin products retrieved.', {
+    products: result.data,
+    pagination: result.pagination,
+  });
 });
 
 /**

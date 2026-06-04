@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { getCategories } from '../../api/axios.js'
 
 const STATUS_OPTIONS = ['active', 'review', 'disabled']
 
 const ProductModal = ({ product, onSave, onClose }) => {
+  const [categories, setCategories] = useState([])
   const [form, setForm] = useState({
     name: product?.name || '',
     brand: product?.brand || '',
     sku: product?.sku || '',
+    categoryId: product?.categoryId?._id || product?.categoryId || '',
     description: product?.description || '',
     currentPrice: product?.currentPrice || '',
     originalPrice: product?.originalPrice || '',
@@ -15,6 +18,12 @@ const ProductModal = ({ product, onSave, onClose }) => {
     status: product?.status || 'active',
     images: product?.images?.join('\n') || '',
   })
+
+  useEffect(() => {
+    getCategories()
+      .then(res => setCategories(res.data?.data?.categories || []))
+      .catch(() => setCategories([]))
+  }, [])
 
   const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -51,13 +60,16 @@ const ProductModal = ({ product, onSave, onClose }) => {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
               <div className="form-group">
-                <label className="form-label">SKU</label>
-                <input name="sku" className="form-input" value={form.sku} onChange={handleChange} />
+                <label className="form-label">SKU *</label>
+                <input name="sku" className="form-input" value={form.sku} onChange={handleChange} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Status</label>
-                <select name="status" className="form-input" value={form.status} onChange={handleChange}>
-                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                <label className="form-label">Category *</label>
+                <select name="categoryId" className="form-input" value={form.categoryId} onChange={handleChange} required>
+                  <option value="">Select a category</option>
+                  {categories.map(c => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -74,6 +86,12 @@ const ProductModal = ({ product, onSave, onClose }) => {
                 <label className="form-label">Stock</label>
                 <input name="stock" type="number" className="form-input" value={form.stock} onChange={handleChange} min="0" />
               </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select name="status" className="form-input" value={form.status} onChange={handleChange}>
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Description</label>
@@ -97,3 +115,4 @@ const ProductModal = ({ product, onSave, onClose }) => {
 }
 
 export default ProductModal
+
