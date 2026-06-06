@@ -8,10 +8,6 @@ import EmptyState from '../components/common/EmptyState.jsx'
 import Footer from '../components/layout/Footer.jsx'
 import { getCategories, getTrendingProducts } from '../api/axios.js'
 
-const CHIPS = ['Gaming Laptops', 'OLED TVs', 'Ergonomic Chairs', 'Coffee Machines', 'Wireless Earbuds', 'Mechanical Keyboards']
-
-const CATEGORY_ICONS = { 'Laptops': '💻', 'Smartphones': '📱', 'Televisions': '📺', 'Cameras': '📷', 'Audio': '🎧', 'Furniture': '🪑', 'Kitchen': '☕', 'Gaming': '🎮', 'Wearables': '⌚', 'Tablets': '📲', 'default': '📦' }
-
 const SkeletonCard = () => (
   <div className="skeleton-card" style={{ width:240, flexShrink:0 }}>
     <div className="skeleton" style={{ height:180 }} />
@@ -47,11 +43,6 @@ const Home = () => {
     if (q.trim()) navigate(`/search?q=${encodeURIComponent(q.trim())}`)
   }
 
-  const getCatIcon = (name) => {
-    const key = Object.keys(CATEGORY_ICONS).find(k => name?.toLowerCase().includes(k.toLowerCase()))
-    return CATEGORY_ICONS[key] || CATEGORY_ICONS.default
-  }
-
   return (
     <div>
       {/* ── Hero ── */}
@@ -71,9 +62,9 @@ const Home = () => {
             <SearchBar large onSearch={handleSearch} />
           </div>
           <div className="hero-chips">
-            {CHIPS.map(chip => (
-              <button key={chip} className="hero-chip" onClick={() => handleSearch(chip)}>
-                {chip}
+            {categories.slice(0, 6).map(cat => (
+              <button key={cat._id} className="hero-chip" onClick={() => handleSearch(cat.name)}>
+                {cat.name}
               </button>
             ))}
           </div>
@@ -103,7 +94,7 @@ const Home = () => {
                   className="category-card"
                   onClick={() => navigate(`/category/${cat.slug}`)}
                 >
-                  <div className="category-icon">{getCatIcon(cat.name)}</div>
+                  <div className="category-icon">{cat.icon || '📦'}</div>
                   <div className="category-name">{cat.name}</div>
                   <div className="category-count">{cat.productCount || 0} products</div>
                 </div>

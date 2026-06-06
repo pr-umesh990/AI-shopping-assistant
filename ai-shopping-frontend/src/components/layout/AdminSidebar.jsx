@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Package, BarChart2, Sparkles, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, BarChart2, Sparkles, LogOut, FolderTree } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useNavigate } from 'react-router-dom'
 
@@ -11,6 +11,7 @@ const AdminSidebar = () => {
   const links = [
     { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Overview' },
     { to: '/admin/products', icon: Package, label: 'Products' },
+    { to: '/admin/categories', icon: FolderTree, label: 'Categories' },
     { to: '/admin/analytics', icon: BarChart2, label: 'Analytics' },
   ]
 

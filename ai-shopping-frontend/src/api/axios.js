@@ -91,4 +91,9 @@ export const getRevenueByCategory = () => axios.get('/admin/analytics/revenue-by
 export const getTrafficChannels = () => axios.get('/admin/analytics/traffic-channels')
 export const getAffiliateMilestone = () => axios.get('/admin/analytics/affiliate-milestone')
 
+export const getAdminCategories = (params) => axios.get('/admin/categories', { params })
+export const createAdminCategory = (data) => axios.post('/admin/categories', data)
+export const updateAdminCategory = (id, data) => axios.put(`/admin/categories/${id}`, data)
+export const deleteAdminCategory = (id) => axios.delete(`/admin/categories/${id}`)
+
 export default axios

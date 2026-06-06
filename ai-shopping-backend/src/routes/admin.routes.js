@@ -14,6 +14,12 @@ import {
   getAffiliateMilestone,
   exportReport,
 } from '../controllers/admin/analytics.controller.js';
+import {
+  getAdminCategories,
+  createAdminCategory,
+  updateAdminCategory,
+  deleteAdminCategory,
+} from '../controllers/admin/category.admin.controller.js';
 
 const router = Router();
 
@@ -28,6 +34,12 @@ router.get('/products', getProducts);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
+
+// Category management
+router.get('/categories', getAdminCategories);
+router.post('/categories', createAdminCategory);
+router.put('/categories/:id', updateAdminCategory);
+router.delete('/categories/:id', deleteAdminCategory);
 
 // Analytics
 router.get('/analytics/revenue-by-category', getRevenueByCategory);

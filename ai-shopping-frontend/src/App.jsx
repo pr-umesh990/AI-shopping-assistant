@@ -17,6 +17,7 @@ import RegisterPage from './pages/RegisterPage.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminProducts from './pages/admin/AdminProducts.jsx'
+import AdminCategories from './pages/admin/AdminCategories.jsx'
 import AdminAnalytics from './pages/admin/AdminAnalytics.jsx'
 
 const NotFound = () => (
@@ -36,6 +37,7 @@ const App = () => (
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="products" element={<AdminProducts />} />
+        <Route path="categories" element={<AdminCategories />} />
         <Route path="analytics" element={<AdminAnalytics />} />
       </Route>
 
