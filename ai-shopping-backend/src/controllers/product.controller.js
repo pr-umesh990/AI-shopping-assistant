@@ -36,9 +36,10 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  // Subcategory filter
-  if (subcategory) {
-    query.subcategory = subcategory;
+  // Subcategory filter — param name kept as 'subcategory' for backwards compat
+  // but now treated as an ObjectId (subcategoryId)
+  if (subcategory && mongoose.Types.ObjectId.isValid(subcategory)) {
+    query.subcategoryId = subcategory;
   }
 
   // Brand filter (comma-separated)
@@ -94,7 +95,17 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  const result = await paginate(Product, query, page, limit, { path: 'categoryId', select: 'name slug' }, sortOptions);
+  const result = await paginate(
+    Product,
+    query,
+    page,
+    limit,
+    [
+      { path: 'categoryId', select: 'name slug' },
+      { path: 'subcategoryId', select: 'name slug' },
+    ],
+    sortOptions
+  );
 
   return successResponse(res, 200, 'Products retrieved.', result);
 });
@@ -108,6 +119,7 @@ export const getTrending = asyncHandler(async (req, res) => {
     .sort({ rating: -1 })
     .limit(8)
     .populate('categoryId', 'name slug')
+    .populate('subcategoryId', 'name slug')
     .lean();
 
   return successResponse(res, 200, 'Trending products retrieved.', { products });
@@ -126,6 +138,7 @@ export const getProduct = asyncHandler(async (req, res) => {
 
   const product = await Product.findById(id)
     .populate('categoryId', 'name slug')
+    .populate('subcategoryId', 'name slug')
     .lean();
 
   if (!product || product.status === 'disabled') {
@@ -242,6 +255,7 @@ export const getAlternatives = asyncHandler(async (req, res) => {
     .sort({ rating: -1 })
     .limit(4)
     .populate('categoryId', 'name slug')
+    .populate('subcategoryId', 'name slug')
     .lean();
 
   return successResponse(res, 200, 'Alternative products retrieved.', { alternatives });

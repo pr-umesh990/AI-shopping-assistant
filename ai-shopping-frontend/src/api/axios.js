@@ -41,13 +41,13 @@ axios.interceptors.response.use(
   }
 )
 
-// ── Auth ──
+// Auth
 export const registerUser = (data) => axios.post('/auth/register', data)
 export const loginUser = (data) => axios.post('/auth/login', data)
 export const getMe = () => axios.get('/auth/me')
 export const updateMe = (data) => axios.patch('/auth/me', data)
 
-// ── Products ──
+// Products
 export const getProducts = (params) => axios.get('/products', { params })
 export const getTrendingProducts = () => axios.get('/products/trending')
 export const getProduct = (id) => axios.get(`/products/${id}`)
@@ -55,33 +55,33 @@ export const getPriceHistory = (id) => axios.get(`/products/${id}/price-history`
 export const getAiReview = (id) => axios.get(`/products/${id}/ai-review`)
 export const getAlternatives = (id) => axios.get(`/products/${id}/alternatives`)
 
-// ── Categories ──
+// Categories
 export const getCategories = () => axios.get('/categories')
 export const getCategoryProducts = (slug, params) => axios.get(`/categories/${slug}/products`, { params })
 export const getCategoryInsight = (slug) => axios.get(`/categories/${slug}/ai-insight`)
 
-// ── Search ──
+// Search
 export const searchProducts = (data) => axios.post('/search', data)
 export const getSearchSuggestions = (q) => axios.get('/search/suggestions', { params: { q } })
 
-// ── Compare ──
+// Compare
 export const compareProducts = (ids) => axios.get('/compare', { params: { ids: ids.join(',') } })
 export const getCompareVerdict = (ids) => axios.get('/compare/ai-verdict', { params: { ids: ids.join(',') } })
 
-// ── Wishlist ──
+//Wishlist
 export const getWishlist = (params) => axios.get('/wishlist', { params })
 export const addToWishlist = (productId) => axios.post('/wishlist', { productId })
 export const removeFromWishlist = (productId) => axios.delete(`/wishlist/${productId}`)
 export const toggleWishlistAlert = (productId, enabled) => axios.patch(`/wishlist/${productId}/alert`, { enabled })
 export const getWishlistRecommendations = () => axios.get('/wishlist/recommendations')
 
-// ── Affiliate ──
+//Affiliate
 export const trackAffiliateClick = (data) => axios.post('/affiliate/click', data)
 
-// ── Newsletter ──
+//Newsletter
 export const subscribeNewsletter = (email) => axios.post('/newsletter/subscribe', { email })
 
-// ── Admin ──
+//admin
 export const getAdminStats = () => axios.get('/admin/stats')
 export const getAdminProducts = (params) => axios.get('/admin/products', { params })
 export const createAdminProduct = (data) => axios.post('/admin/products', data)
@@ -95,5 +95,20 @@ export const getAdminCategories = (params) => axios.get('/admin/categories', { p
 export const createAdminCategory = (data) => axios.post('/admin/categories', data)
 export const updateAdminCategory = (id, data) => axios.put(`/admin/categories/${id}`, data)
 export const deleteAdminCategory = (id) => axios.delete(`/admin/categories/${id}`)
+
+//Subcategories (public)
+export const getSubcategories = (categoryId) =>
+  axios.get('/subcategories', { params: { categoryId } })
+export const getSubcategory = (id) => axios.get(`/subcategories/${id}`)
+
+//subcategories (admin)
+export const getAdminSubcategories = (categoryId) =>
+  axios.get('/admin/subcategories', { params: { categoryId } })
+export const createAdminSubcategory = (data) =>
+  axios.post('/admin/subcategories', data)
+export const updateAdminSubcategory = (id, data) =>
+  axios.put(`/admin/subcategories/${id}`, data)
+export const deleteAdminSubcategory = (id) =>
+  axios.delete(`/admin/subcategories/${id}`)
 
 export default axios

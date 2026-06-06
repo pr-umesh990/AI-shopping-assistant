@@ -1,4 +1,5 @@
 import Category from '../../models/Category.js';
+import Subcategory from '../../models/Subcategory.js';
 import Product from '../../models/Product.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
@@ -7,14 +8,31 @@ import slugify from '../../utils/slugify.js';
 
 /**
  * @route   GET /api/v1/admin/categories
- * @desc    Get all categories with pagination (Admin)
+ * @desc    Get all categories with subcategories (Admin)
  */
 export const getAdminCategories = asyncHandler(async (req, res) => {
   const { page, limit } = req.query;
   const result = await paginate(Category, {}, page, limit, null, { name: 1 });
 
+  const categoryIds = result.data.map((c) => c._id);
+
+  // Fetch all subcategories for these categories in one query
+  const subcategories = await Subcategory.find({
+    categoryId: { $in: categoryIds },
+    isActive: true,
+  })
+    .select('name slug categoryId icon productCount isActive')
+    .lean();
+
+  const categoriesWithSubs = result.data.map((cat) => ({
+    ...cat,
+    subcategories: subcategories.filter(
+      (s) => s.categoryId.toString() === cat._id.toString()
+    ),
+  }));
+
   return successResponse(res, 200, 'Admin categories retrieved.', {
-    categories: result.data,
+    categories: categoriesWithSubs,
     pagination: result.pagination,
   });
 });
@@ -31,7 +49,7 @@ export const createAdminCategory = asyncHandler(async (req, res) => {
   }
 
   const slug = slugify(name);
-  
+
   const existingCategory = await Category.findOne({ slug });
   if (existingCategory) {
     return errorResponse(res, 400, 'Category with this name already exists.');
@@ -63,7 +81,7 @@ export const updateAdminCategory = asyncHandler(async (req, res) => {
   if (name) {
     category.name = name;
     category.slug = slugify(name);
-    
+
     // Check if new slug conflicts with another category
     const conflict = await Category.findOne({ slug: category.slug, _id: { $ne: id } });
     if (conflict) {
@@ -89,6 +107,16 @@ export const deleteAdminCategory = asyncHandler(async (req, res) => {
   const category = await Category.findById(id);
   if (!category) {
     return errorResponse(res, 404, 'Category not found.');
+  }
+
+  // Check if any active subcategories exist for this category
+  const subcategoryCount = await Subcategory.countDocuments({ categoryId: id, isActive: true });
+  if (subcategoryCount > 0) {
+    return errorResponse(
+      res,
+      400,
+      `Cannot delete: category has ${subcategoryCount} subcategor${subcategoryCount !== 1 ? 'ies' : 'y'}. Delete subcategories first.`
+    );
   }
 
   // Check if any products exist in this category

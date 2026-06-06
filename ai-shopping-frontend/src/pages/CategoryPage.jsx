@@ -7,7 +7,7 @@ import Pagination from '../components/common/Pagination.jsx'
 import ComparisonTray from '../components/search/ComparisonTray.jsx'
 import EmptyState from '../components/common/EmptyState.jsx'
 import LoadingSpinner from '../components/common/LoadingSpinner.jsx'
-import { getCategoryProducts, getCategoryInsight } from '../api/axios.js'
+import { getCategoryProducts, getCategoryInsight, getSubcategories } from '../api/axios.js'
 
 const CategoryPage = () => {
   const { slug } = useParams()
@@ -16,9 +16,12 @@ const CategoryPage = () => {
   const [categoryInfo, setCategoryInfo] = useState(null)
   const [insight, setInsight] = useState(null)
   const [pagination, setPagination] = useState(null)
+  const [subcategories, setSubcategories] = useState([])
+  const [activeSubcat, setActiveSubcat] = useState(null) // null = "All"
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
 
+  // Initial load: fetch products + insight in parallel
   useEffect(() => {
     setLoading(true)
     Promise.all([
@@ -30,12 +33,42 @@ const CategoryPage = () => {
       setCategoryInfo(data?.category || null)
       setPagination(data?.pagination || null)
       setInsight(insightRes?.data?.data || null)
+
+      // Fetch subcategories once we have the categoryId
+      const catId = data?.category?._id
+      if (catId) {
+        getSubcategories(catId)
+          .then(r => setSubcategories(r.data?.data?.subcategories || []))
+          .catch(() => {})
+      }
     }).catch(() => {
       toast.error('Could not load category.')
     }).finally(() => setLoading(false))
-  }, [slug, page])
+  }, [slug])
 
-  if (loading) return <LoadingSpinner fullPage />
+  // Re-fetch products when page or active subcategory changes
+  useEffect(() => {
+    if (loading) return // Don't double-fetch on initial mount
+    setLoading(true)
+    getCategoryProducts(slug, {
+      page,
+      limit: 12,
+      subcategoryId: activeSubcat || undefined,
+    }).then(res => {
+      const data = res.data?.data
+      setProducts(data?.products || [])
+      setPagination(data?.pagination || null)
+    }).catch(() => {
+      toast.error('Could not load products.')
+    }).finally(() => setLoading(false))
+  }, [page, activeSubcat])
+
+  const handleSubcatChange = (subcatId) => {
+    setActiveSubcat(subcatId)
+    setPage(1)
+  }
+
+  if (loading && !categoryInfo) return <LoadingSpinner fullPage />
 
   return (
     <div>
@@ -58,11 +91,34 @@ const CategoryPage = () => {
               {pagination.total} products
             </p>
           )}
+
+          {/* Subcategory Filter Tabs */}
+          {subcategories.length > 0 && (
+            <div className="tab-bar" style={{ marginTop:'1.25rem', borderBottom:'none', gap:'0.5rem', flexWrap:'wrap' }}>
+              <button
+                className={`tab-btn${!activeSubcat ? ' active' : ''}`}
+                onClick={() => handleSubcatChange(null)}
+              >
+                All
+              </button>
+              {subcategories.map(sub => (
+                <button
+                  key={sub._id}
+                  className={`tab-btn${activeSubcat === sub._id ? ' active' : ''}`}
+                  onClick={() => handleSubcatChange(sub._id)}
+                >
+                  {sub.icon && `${sub.icon} `}{sub.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="container" style={{ padding:'2rem 1rem' }}>
-        {products.length > 0 ? (
+        {loading ? (
+          <LoadingSpinner />
+        ) : products.length > 0 ? (
           <>
             <div className="products-grid">
               {products.map(p => (
@@ -74,10 +130,10 @@ const CategoryPage = () => {
         ) : (
           <EmptyState
             icon={Package}
-            title="No products in this category"
-            description="Products are being added. Check back soon!"
-            actionLabel="Browse All"
-            onAction={() => navigate('/')}
+            title={activeSubcat ? 'No products in this subcategory' : 'No products in this category'}
+            description={activeSubcat ? 'Try selecting "All" or another subcategory.' : 'Products are being added. Check back soon!'}
+            actionLabel={activeSubcat ? 'View All' : 'Browse All'}
+            onAction={() => activeSubcat ? handleSubcatChange(null) : navigate('/')}
           />
         )}
 

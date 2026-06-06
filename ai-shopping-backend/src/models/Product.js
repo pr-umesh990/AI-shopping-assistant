@@ -35,9 +35,10 @@ const productSchema = new mongoose.Schema(
       ref: 'Category',
       required: [true, 'Category is required.'],
     },
-    subcategory: {
-      type: String,
-      trim: true,
+    subcategoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Subcategory',
+      default: null,
     },
     description: {
       type: String,
@@ -113,6 +114,7 @@ const productSchema = new mongoose.Schema(
 
 // Indexes
 productSchema.index({ categoryId: 1 });
+productSchema.index({ subcategoryId: 1 });
 productSchema.index({ brand: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ isTrending: 1 });

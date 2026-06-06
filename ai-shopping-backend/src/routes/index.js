@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes.js';
 import productRoutes from './product.routes.js';
 import categoryRoutes from './category.routes.js';
+import subcategoryRoutes from './subcategory.routes.js';
 import searchRoutes from './search.routes.js';
 import compareRoutes from './compare.routes.js';
 import wishlistRoutes from './wishlist.routes.js';
@@ -24,6 +25,7 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
 router.use('/categories', categoryRoutes);
+router.use('/subcategories', subcategoryRoutes);
 router.use('/search', searchRoutes);
 router.use('/compare', compareRoutes);
 router.use('/wishlist', wishlistRoutes);

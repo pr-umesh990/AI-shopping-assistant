@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import Category from '../models/Category.js';
+import Subcategory from '../models/Subcategory.js';
 import Product from '../models/Product.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
@@ -7,19 +9,36 @@ import { generateCategoryInsight } from '../services/ai.service.js';
 
 /**
  * @route   GET /api/v1/categories
- * @desc    Get all top-level categories
+ * @desc    Get all top-level categories with their subcategories
  */
 export const getCategories = asyncHandler(async (req, res) => {
   const categories = await Category.find({ parentCategory: null })
     .sort({ name: 1 })
     .lean();
 
-  return successResponse(res, 200, 'Categories retrieved.', { categories });
+  // Fetch all active subcategories for these categories in one query
+  const categoryIds = categories.map((c) => c._id);
+  const subcategories = await Subcategory.find({
+    categoryId: { $in: categoryIds },
+    isActive: true,
+  })
+    .select('name slug categoryId icon')
+    .lean();
+
+  // Attach subcategories to each category
+  const categoriesWithSubs = categories.map((cat) => ({
+    ...cat,
+    subcategories: subcategories.filter(
+      (s) => s.categoryId.toString() === cat._id.toString()
+    ),
+  }));
+
+  return successResponse(res, 200, 'Categories retrieved.', { categories: categoriesWithSubs });
 });
 
 /**
  * @route   GET /api/v1/categories/:slug
- * @desc    Get single category by slug
+ * @desc    Get single category by slug with subcategories
  */
 export const getCategory = asyncHandler(async (req, res) => {
   const { slug } = req.params;
@@ -32,7 +51,18 @@ export const getCategory = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Category not found.');
   }
 
-  return successResponse(res, 200, 'Category retrieved.', { category });
+  // Fetch subcategories for this category
+  const subcategories = await Subcategory.find({
+    categoryId: category._id,
+    isActive: true,
+  })
+    .select('name slug icon description productCount')
+    .sort({ name: 1 })
+    .lean();
+
+  return successResponse(res, 200, 'Category retrieved.', {
+    category: { ...category, subcategories },
+  });
 });
 
 /**
@@ -41,7 +71,7 @@ export const getCategory = asyncHandler(async (req, res) => {
  */
 export const getCategoryProducts = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const { subcategory, sort, page, limit } = req.query;
+  const { subcategoryId, sort, page, limit } = req.query;
 
   const category = await Category.findOne({ slug }).select('_id').lean();
   if (!category) {
@@ -50,8 +80,9 @@ export const getCategoryProducts = asyncHandler(async (req, res) => {
 
   const query = { categoryId: category._id, status: 'active' };
 
-  if (subcategory) {
-    query.subcategory = subcategory;
+  // Filter by subcategoryId if provided (ObjectId)
+  if (subcategoryId && mongoose.Types.ObjectId.isValid(subcategoryId)) {
+    query.subcategoryId = subcategoryId;
   }
 
   let sortOptions = { createdAt: -1 };
@@ -74,7 +105,17 @@ export const getCategoryProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  const result = await paginate(Product, query, page, limit, { path: 'categoryId', select: 'name slug' }, sortOptions);
+  const result = await paginate(
+    Product,
+    query,
+    page,
+    limit,
+    [
+      { path: 'categoryId', select: 'name slug' },
+      { path: 'subcategoryId', select: 'name slug' },
+    ],
+    sortOptions
+  );
 
   return successResponse(res, 200, 'Category products retrieved.', result);
 });
@@ -117,3 +158,5 @@ export const getCategoryInsight = asyncHandler(async (req, res) => {
     lastUpdated: category.aiInsightUpdatedAt,
   });
 });
+
+

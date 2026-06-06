@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
-import { getCategories } from '../../api/axios.js'
+import { X, Loader2 } from 'lucide-react'
+import { getCategories, getAdminSubcategories } from '../../api/axios.js'
 
 const STATUS_OPTIONS = ['active', 'review', 'disabled']
 
 const ProductModal = ({ product, onSave, onClose }) => {
   const [categories, setCategories] = useState([])
+  const [subcategories, setSubcategories] = useState([])
+  const [subcatLoading, setSubcatLoading] = useState(false)
   const [form, setForm] = useState({
     name: product?.name || '',
     brand: product?.brand || '',
     sku: product?.sku || '',
     categoryId: product?.categoryId?._id || product?.categoryId || '',
+    subcategoryId: product?.subcategoryId?._id || product?.subcategoryId || '',
     description: product?.description || '',
     currentPrice: product?.currentPrice || '',
     originalPrice: product?.originalPrice || '',
@@ -19,13 +22,35 @@ const ProductModal = ({ product, onSave, onClose }) => {
     images: product?.images?.join('\n') || '',
   })
 
+  // Fetch categories on mount
   useEffect(() => {
     getCategories()
       .then(res => setCategories(res.data?.data?.categories || []))
       .catch(() => setCategories([]))
   }, [])
 
-  const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+  // Fetch subcategories when categoryId changes
+  useEffect(() => {
+    if (!form.categoryId) {
+      setSubcategories([])
+      return
+    }
+    setSubcatLoading(true)
+    getAdminSubcategories(form.categoryId)
+      .then(res => setSubcategories(res.data?.data?.subcategories || []))
+      .catch(() => setSubcategories([]))
+      .finally(() => setSubcatLoading(false))
+  }, [form.categoryId])
+
+  const handleChange = e => {
+    const { name, value } = e.target
+    setForm(f => {
+      const next = { ...f, [name]: value }
+      // Clear subcategoryId when category changes
+      if (name === 'categoryId') next.subcategoryId = ''
+      return next
+    })
+  }
 
   const handleSubmit = e => {
     e.preventDefault()
@@ -35,6 +60,8 @@ const ProductModal = ({ product, onSave, onClose }) => {
       originalPrice: Number(form.originalPrice) || undefined,
       stock: Number(form.stock),
       images: form.images.split('\n').map(s => s.trim()).filter(Boolean),
+      // Send null if no subcategory selected
+      subcategoryId: form.subcategoryId || null,
     }
     onSave(payload)
   }
@@ -73,6 +100,35 @@ const ProductModal = ({ product, onSave, onClose }) => {
                 </select>
               </div>
             </div>
+
+            {/* Subcategory row */}
+            <div className="form-group">
+              <label className="form-label">
+                Subcategory
+                {subcatLoading && (
+                  <Loader2 size={13} style={{ display:'inline-block', marginLeft:'0.4rem', animation:'spin 1s linear infinite' }} />
+                )}
+              </label>
+              <select
+                name="subcategoryId"
+                className="form-input"
+                value={form.subcategoryId}
+                onChange={handleChange}
+                disabled={!form.categoryId || subcatLoading}
+              >
+                <option value="">
+                  {!form.categoryId
+                    ? 'Select a category first'
+                    : subcategories.length === 0 && !subcatLoading
+                    ? 'No subcategories available'
+                    : 'No Subcategory'}
+                </option>
+                {subcategories.map(s => (
+                  <option key={s._id} value={s._id}>{s.icon ? `${s.icon} ` : ''}{s.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1rem' }}>
               <div className="form-group">
                 <label className="form-label">Current Price ($) *</label>
@@ -115,4 +171,3 @@ const ProductModal = ({ product, onSave, onClose }) => {
 }
 
 export default ProductModal
-

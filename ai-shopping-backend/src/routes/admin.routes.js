@@ -20,6 +20,13 @@ import {
   updateAdminCategory,
   deleteAdminCategory,
 } from '../controllers/admin/category.admin.controller.js';
+import {
+  getSubcategoriesByCategory,
+  createSubcategory,
+  updateSubcategory,
+  deleteSubcategory,
+  reorderSubcategories,
+} from '../controllers/admin/subcategory.admin.controller.js';
 
 const router = Router();
 
@@ -40,6 +47,13 @@ router.get('/categories', getAdminCategories);
 router.post('/categories', createAdminCategory);
 router.put('/categories/:id', updateAdminCategory);
 router.delete('/categories/:id', deleteAdminCategory);
+
+// Subcategory management
+router.get('/subcategories', getSubcategoriesByCategory);
+router.patch('/subcategories/reorder', reorderSubcategories);
+router.post('/subcategories', createSubcategory);
+router.put('/subcategories/:id', updateSubcategory);
+router.delete('/subcategories/:id', deleteSubcategory);
 
 // Analytics
 router.get('/analytics/revenue-by-category', getRevenueByCategory);

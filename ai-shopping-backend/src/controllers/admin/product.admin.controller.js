@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import Product from '../../models/Product.js';
+import Category from '../../models/Category.js';
+import Subcategory from '../../models/Subcategory.js';
 import PriceHistory from '../../models/PriceHistory.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import { successResponse, errorResponse } from '../../utils/apiResponse.js';
@@ -38,7 +40,10 @@ export const getProducts = asyncHandler(async (req, res) => {
     query,
     page,
     limit,
-    { path: 'categoryId', select: 'name slug' },
+    [
+      { path: 'categoryId', select: 'name slug' },
+      { path: 'subcategoryId', select: 'name slug' },
+    ],
     { createdAt: -1 }
   );
 
@@ -58,7 +63,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     brand,
     sku,
     categoryId,
-    subcategory,
+    subcategoryId,
     description,
     images,
     currentPrice,
@@ -84,6 +89,25 @@ export const createProduct = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, 'Invalid category ID format.');
   }
 
+  // Validate subcategoryId if provided
+  let resolvedSubcategoryId = null;
+  if (subcategoryId) {
+    if (!mongoose.Types.ObjectId.isValid(subcategoryId)) {
+      return errorResponse(res, 400, 'Invalid subcategory ID format.');
+    }
+
+    const subcategory = await Subcategory.findById(subcategoryId).lean();
+    if (!subcategory) {
+      return errorResponse(res, 400, 'Subcategory not found.');
+    }
+
+    if (subcategory.categoryId.toString() !== categoryId.toString()) {
+      return errorResponse(res, 400, 'Subcategory does not belong to selected category.');
+    }
+
+    resolvedSubcategoryId = subcategoryId;
+  }
+
   // Auto-generate tracked URLs for affiliate links
   const processedLinks = (affiliateLinks || []).map((link) => ({
     retailer: link.retailer,
@@ -96,7 +120,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     brand,
     sku: sku.toUpperCase(),
     categoryId,
-    subcategory,
+    subcategoryId: resolvedSubcategoryId,
     description,
     images: images || [],
     currentPrice,
@@ -116,6 +140,14 @@ export const createProduct = asyncHandler(async (req, res) => {
 
   // Create initial price history record
   await recordPrice(product._id, currentPrice, 'admin');
+
+  // Increment category productCount
+  await Category.findByIdAndUpdate(categoryId, { $inc: { productCount: 1 } });
+
+  // Increment subcategory productCount if applicable
+  if (resolvedSubcategoryId) {
+    await Subcategory.findByIdAndUpdate(resolvedSubcategoryId, { $inc: { productCount: 1 } });
+  }
 
   return successResponse(res, 201, 'Product created successfully.', { product });
 });
@@ -137,10 +169,60 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
 
   const oldPrice = existingProduct.currentPrice;
+  const oldCategoryId = existingProduct.categoryId?.toString();
+  const oldSubcategoryId = existingProduct.subcategoryId?.toString() || null;
 
-  // Apply updates
+  // Handle subcategoryId change if included in request body
+  if (req.body.subcategoryId !== undefined) {
+    const newSubcategoryId = req.body.subcategoryId || null;
+
+    if (newSubcategoryId) {
+      if (!mongoose.Types.ObjectId.isValid(newSubcategoryId)) {
+        return errorResponse(res, 400, 'Invalid subcategory ID format.');
+      }
+
+      const newCategoryId = req.body.categoryId || existingProduct.categoryId;
+      const subcategory = await Subcategory.findById(newSubcategoryId).lean();
+
+      if (!subcategory) {
+        return errorResponse(res, 400, 'Subcategory not found.');
+      }
+
+      if (subcategory.categoryId.toString() !== newCategoryId.toString()) {
+        return errorResponse(res, 400, 'Subcategory does not belong to selected category.');
+      }
+    }
+
+    // Decrement old subcategory productCount
+    if (oldSubcategoryId && oldSubcategoryId !== (newSubcategoryId || null)?.toString()) {
+      await Subcategory.findByIdAndUpdate(oldSubcategoryId, {
+        $inc: { productCount: -1 },
+      });
+    }
+
+    // Increment new subcategory productCount
+    if (newSubcategoryId && oldSubcategoryId !== newSubcategoryId) {
+      await Subcategory.findByIdAndUpdate(newSubcategoryId, {
+        $inc: { productCount: 1 },
+      });
+    }
+
+    existingProduct.subcategoryId = newSubcategoryId;
+  }
+
+  // Handle categoryId change
+  if (req.body.categoryId !== undefined && req.body.categoryId !== oldCategoryId) {
+    if (!mongoose.Types.ObjectId.isValid(req.body.categoryId)) {
+      return errorResponse(res, 400, 'Invalid category ID format.');
+    }
+    await Category.findByIdAndUpdate(oldCategoryId, { $inc: { productCount: -1 } });
+    await Category.findByIdAndUpdate(req.body.categoryId, { $inc: { productCount: 1 } });
+    existingProduct.categoryId = req.body.categoryId;
+  }
+
+  // Apply remaining allowed field updates
   const allowedFields = [
-    'name', 'brand', 'sku', 'categoryId', 'subcategory', 'description',
+    'name', 'brand', 'sku', 'description',
     'images', 'currentPrice', 'originalPrice', 'currency', 'rating',
     'reviewCount', 'specs', 'badges', 'useCaseTags', 'affiliateLinks',
     'stock', 'status', 'isTrending', 'aiHighlights',
@@ -190,6 +272,20 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 
   product.status = 'disabled';
   await product.save();
+
+  // Decrement category productCount
+  if (product.categoryId) {
+    await Category.findByIdAndUpdate(product.categoryId, { $inc: { productCount: -1 } });
+  }
+
+  // Decrement subcategory productCount (floor at 0)
+  if (product.subcategoryId) {
+    const sub = await Subcategory.findById(product.subcategoryId);
+    if (sub) {
+      sub.productCount = Math.max(0, (sub.productCount || 0) - 1);
+      await sub.save();
+    }
+  }
 
   return successResponse(res, 200, 'Product disabled successfully.');
 });
