@@ -33,9 +33,11 @@ const CategoryPage = () => {
       setCategoryInfo(data?.category || null)
       setPagination(data?.pagination || null)
       setInsight(insightRes?.data?.data || null)
+      console.log("Category Data", data);
 
       // Fetch subcategories once we have the categoryId
       const catId = data?.category?._id
+      console.log("Category Id", catId);
       if (catId) {
         getSubcategories(catId)
           .then(r => setSubcategories(r.data?.data?.subcategories || []))

@@ -73,7 +73,13 @@ export const getCategoryProducts = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { subcategoryId, sort, page, limit } = req.query;
 
-  const category = await Category.findOne({ slug }).select('_id').lean();
+  // const category = await Category.findOne({ slug }).select('_id').lean();
+
+   // Fetch full category (not just _id)
+  const category = await Category.findOne({ slug })
+    .select('_id name slug icon description productCount')
+    .lean()
+    
   if (!category) {
     return errorResponse(res, 404, 'Category not found.');
   }
@@ -105,19 +111,18 @@ export const getCategoryProducts = asyncHandler(async (req, res) => {
     }
   }
 
-  const result = await paginate(
-    Product,
-    query,
-    page,
-    limit,
-    [
+  const result = await paginate(Product, query, page, limit, [
       { path: 'categoryId', select: 'name slug' },
       { path: 'subcategoryId', select: 'name slug' },
     ],
     sortOptions
   );
-
-  return successResponse(res, 200, 'Category products retrieved.', result);
+  return successResponse(res, 200, 'Category products retrieved.',{
+    category,
+    products:result.data,
+    pagination:result.pagination
+  } );
+  
 });
 
 /**
