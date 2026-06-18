@@ -1,11 +1,5 @@
 import { Router } from 'express';
-import {
-  getWishlist,
-  addToWishlist,
-  removeFromWishlist,
-  toggleAlert,
-  getRecommendations,
-} from '../controllers/wishlist.controller.js';
+import { getWishlist, addToWishlist, removeFromWishlist, toggleAlert, getRecommendations,} from '../controllers/wishlist.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = Router();

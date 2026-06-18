@@ -17,7 +17,7 @@ const compareSlice = createSlice({
       }
       const exists = state.items.find(p => p._id === product._id)
       if (exists) {
-        toast('Already in compare list.', { icon: 'ℹ️' })
+        toast('Already in compare list.', { icon: 'i' })
         return
       }
       state.items.push(product)

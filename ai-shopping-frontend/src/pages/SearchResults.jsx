@@ -50,8 +50,9 @@ const SearchResults = () => {
         sort: sortBy,
         ...currentFilters,
       })
+      console.log("Search results:", res);
       const data = res.data?.data
-      setProducts(data?.products || [])
+      setProducts(data?.results || [])
       setInterpretation(data?.interpretation || null)
       setPagination(data?.pagination || null)
     } catch (err) {
