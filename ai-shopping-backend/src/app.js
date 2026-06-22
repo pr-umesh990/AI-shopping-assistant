@@ -7,6 +7,7 @@ import routes from './routes/index.js';
 import errorMiddleware from './middleware/error.middleware.js';
 import { generalLimiter, authLimiter, searchLimiter } from './middleware/rateLimit.middleware.js';
 import { errorResponse } from './utils/apiResponse.js';
+import mongoSanitize from 'express-mongo-sanitize';
 
 const app = express();
 
@@ -24,6 +25,9 @@ app.use(
 // Body Parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// NoSQL Injection Protection
+app.use(mongoSanitize());
 
 // Request Logging
 if (config.NODE_ENV === 'development') {

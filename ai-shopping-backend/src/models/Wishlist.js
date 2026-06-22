@@ -30,6 +30,7 @@ const wishlistSchema = new mongoose.Schema({
 
 // Compound unique index: one wishlist entry per user-product pair
 wishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
+wishlistSchema.index({ productId: 1, notifyEnabled: 1 });
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
 

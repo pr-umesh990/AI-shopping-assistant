@@ -1,6 +1,8 @@
 import cron from 'node-cron';
 import Product from '../models/Product.js';
-import { recordPrice, checkAndTriggerAlerts } from '../services/price.service.js';
+import PriceHistory from '../models/PriceHistory.js';
+import { checkAndTriggerAlerts } from '../services/price.service.js';
+import { PRICE_TRACKER } from '../utils/constants.js';
 
 /**
  * Price Tracker Job
@@ -19,7 +21,7 @@ const startPriceTrackerJob = () => {
     let errorCount = 0;
 
     try {
-      const batchSize = 100;
+      const batchSize = PRICE_TRACKER.BATCH_SIZE;
       let skip = 0;
       let hasMore = true;
 
@@ -30,41 +32,64 @@ const startPriceTrackerJob = () => {
           .limit(batchSize)
           .lean();
 
-        if (products.length === 0) {
-          hasMore = false;
-          break;
-        }
+        if (products.length === 0) { hasMore = false; break; }
+
+        // Build bulk write operations
+        const bulkOps = [];
+        const priceHistoryDocs = [];
+        const alertChecks = []; // { productId, newPrice, oldPrice }
 
         for (const product of products) {
-          try {
-            const oldPrice = product.currentPrice;
+          const oldPrice = product.currentPrice;
+          const changePercent = (Math.random() * 4 - 2) / 100;
+          const newPrice = Math.max(PRICE_TRACKER.MIN_PRICE, Math.round(oldPrice * (1 + changePercent) * 100) / 100);
 
-            // Simulate ±2% price variation
-            const changePercent = (Math.random() * 4 - 2) / 100; // -0.02 to +0.02
-            const newPrice = Math.round(oldPrice * (1 + changePercent) * 100) / 100;
+          if (newPrice !== oldPrice) {
+            // Bulk update product price
+            bulkOps.push({
+              updateOne: {
+                filter: { _id: product._id },
+                update: { $set: { currentPrice: newPrice } }
+              }
+            });
 
-            // Ensure price doesn't go below $1
-            const finalPrice = Math.max(1, newPrice);
+            // Collect price history entries
+            priceHistoryDocs.push({
+              productId: product._id,
+              price: newPrice,
+              source: 'tracker',
+              recordedAt: new Date()
+            });
 
-            if (finalPrice !== oldPrice) {
-              await recordPrice(product._id, finalPrice, 'tracker');
-              await checkAndTriggerAlerts(product._id, finalPrice, oldPrice);
+            // Collect for alert checking (only price drops)
+            if (newPrice < oldPrice) {
+              alertChecks.push({ productId: product._id, newPrice, oldPrice });
             }
 
             processedCount++;
-          } catch (err) {
-            errorCount++;
-            console.error(`[PriceTracker] Error processing product ${product._id}: ${err.message}`);
           }
         }
 
-        skip += batchSize;
-
-        if (products.length < batchSize) {
-          hasMore = false;
+        // Execute bulk operations
+        if (bulkOps.length > 0) {
+          await Product.bulkWrite(bulkOps);
         }
+
+        // Insert all price history in one call
+        if (priceHistoryDocs.length > 0) {
+          await PriceHistory.insertMany(priceHistoryDocs);
+        }
+
+        // Check alerts (these still need to be individual — email per user)
+        for (const { productId, newPrice, oldPrice } of alertChecks) {
+          await checkAndTriggerAlerts(productId, newPrice, oldPrice);
+        }
+
+        skip += batchSize;
+        if (products.length < batchSize) hasMore = false;
       }
     } catch (error) {
+      errorCount++;
       console.error(`[PriceTracker] Fatal job error: ${error.message}`);
     }
 

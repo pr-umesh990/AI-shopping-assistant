@@ -4,6 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { generateComparisonVerdict } from '../services/ai.service.js';
 import { redisClient, redisAvailable } from '../middleware/cache.middleware.js';
+import { COMPARE } from '../utils/constants.js';
 
 /**
  * Build a comparison spec row with winner flag.
@@ -48,7 +49,7 @@ export const compare = asyncHandler(async (req, res) => {
 
   const idArray = ids.split(',').map((id) => id.trim()).filter(Boolean);
 
-  if (idArray.length < 2 || idArray.length > 4) {
+  if (idArray.length < COMPARE.MIN_PRODUCTS || idArray.length > COMPARE.MAX_PRODUCTS) {
     return errorResponse(res, 400, 'Please provide between 2 and 4 product IDs.');
   }
 
@@ -114,7 +115,7 @@ export const getAiVerdict = asyncHandler(async (req, res) => {
 
   const idArray = ids.split(',').map((id) => id.trim()).filter(Boolean);
 
-  if (idArray.length < 2 || idArray.length > 4) {
+  if (idArray.length < COMPARE.MIN_PRODUCTS || idArray.length > COMPARE.MAX_PRODUCTS) {
     return errorResponse(res, 400, 'Please provide between 2 and 4 product IDs.');
   }
 

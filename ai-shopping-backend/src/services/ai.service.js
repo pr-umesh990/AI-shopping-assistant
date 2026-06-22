@@ -11,6 +11,29 @@ if (config.OPENAI_API_KEY) {
 }
 
 /**
+ * Call OpenAI with automatic retry on rate limit (429) errors.
+ * @param {Object} params - OpenAI chat completion params
+ * @param {number} retries - Max retry attempts
+ */
+const callOpenAIWithRetry = async (params, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await openai.chat.completions.create(params)
+    } catch (err) {
+      const isRateLimit = err.status === 429 || err.message?.includes('rate limit')
+      const isLastAttempt = i === retries - 1
+      if (isRateLimit && !isLastAttempt) {
+        const delay = 1000 * Math.pow(2, i) // 1s, 2s, 4s
+        console.warn(`[AI Service] Rate limited. Retrying in ${delay}ms... (attempt ${i + 1}/${retries})`)
+        await new Promise(r => setTimeout(r, delay))
+        continue
+      }
+      throw err
+    }
+  }
+}
+
+/**
  * Interpret a raw search query using GPT-4o, extracting structured filters.
  * @param {string} rawQuery
  * @returns {Object} { summary, filters, filterTags }
@@ -21,28 +44,14 @@ export const interpretSearchQuery = async (rawQuery) => {
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await callOpenAIWithRetry({
       model: config.OPENAI_MODEL,
+      max_tokens: 1000,
       temperature: 0.3,
       messages: [
         {
           role: 'system',
-          content: `You are a shopping assistant search interpreter. Given a user's natural language search query, extract structured search filters.
-Return ONLY valid JSON with this exact shape:
-{
-  "summary": "brief human-readable interpretation of the query",
-  "filters": {
-    "category": "string or null",
-    "brands": ["array of brand strings"] or null,
-    "priceMin": number or null,
-    "priceMax": number or null,
-    "ramMin": number or null,
-    "batteryMin": number or null,
-    "features": ["array of feature strings"] or null
-  },
-  "filterTags": ["array of tag strings for UI display"]
-}
-Do not include any explanation, markdown, or extra text. Only output valid JSON.`,
+          content: `You are a shopping assistant search interpreter. Given a user's natural language search query, extract structured search filters.\nReturn ONLY valid JSON with this exact shape:\n{\n  "summary": "brief human-readable interpretation of the query",\n  "filters": {\n    "category": "string or null",\n    "brands": ["array of brand strings"] or null,\n    "priceMin": number or null,\n    "priceMax": number or null,\n    "ramMin": number or null,\n    "batteryMin": number or null,\n    "features": ["array of feature strings"] or null\n  },\n  "filterTags": ["array of tag strings for UI display"]\n}\nDo not include any explanation, markdown, or extra text. Only output valid JSON.`,
         },
         {
           role: 'user',
@@ -53,6 +62,15 @@ Do not include any explanation, markdown, or extra text. Only output valid JSON.
 
     const content = completion.choices[0].message.content.trim();
     const parsed = JSON.parse(content);
+
+    // Validate response shape
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid AI response structure')
+    }
+    if (!parsed.summary) parsed.summary = rawQuery
+    if (!parsed.filters || typeof parsed.filters !== 'object') parsed.filters = {}
+    if (!Array.isArray(parsed.filterTags)) parsed.filterTags = []
+
     return parsed;
   } catch (error) {
     console.error(`[AI Service] interpretSearchQuery error: ${error.message}`);
@@ -78,20 +96,14 @@ export const generateComparisonVerdict = async (products) => {
       specs: p.specs,
     }));
 
-    const completion = await openai.chat.completions.create({
+    const completion = await callOpenAIWithRetry({
       model: config.OPENAI_MODEL,
+      max_tokens: 1000,
       temperature: 0.5,
       messages: [
         {
           role: 'system',
-          content: `You are a tech product comparison expert. Given a set of products with their specs and prices, provide a comparison verdict.
-Return ONLY valid JSON with this shape:
-{
-  "narrative": "A 2-3 paragraph comparison narrative covering key differences",
-  "proPick": { "productId": "id of best overall pick", "reason": "short reason" },
-  "budgetPick": { "productId": "id of best value pick", "reason": "short reason" }
-}
-Only output valid JSON.`,
+          content: `You are a tech product comparison expert. Given a set of products with their specs and prices, provide a comparison verdict.\nReturn ONLY valid JSON with this shape:\n{\n  "narrative": "A 2-3 paragraph comparison narrative covering key differences",\n  "proPick": { "productId": "id of best overall pick", "reason": "short reason" },\n  "budgetPick": { "productId": "id of best value pick", "reason": "short reason" }\n}\nOnly output valid JSON.`,
         },
         {
           role: 'user',
@@ -101,7 +113,15 @@ Only output valid JSON.`,
     });
 
     const content = completion.choices[0].message.content.trim();
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+
+    if (!parsed || !parsed.narrative) {
+      throw new Error('Invalid comparison verdict structure')
+    }
+    if (!parsed.proPick) parsed.proPick = null
+    if (!parsed.budgetPick) parsed.budgetPick = null
+
+    return parsed;
   } catch (error) {
     console.error(`[AI Service] generateComparisonVerdict error: ${error.message}`);
     return null;
@@ -120,20 +140,14 @@ export const generateAiReview = async (productId) => {
     const product = await Product.findById(productId).lean();
     if (!product) return null;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await callOpenAIWithRetry({
       model: config.OPENAI_MODEL,
+      max_tokens: 1000,
       temperature: 0.5,
       messages: [
         {
           role: 'system',
-          content: `You are a product review expert. Given a product's details, generate a balanced AI review.
-Return ONLY valid JSON with this shape:
-{
-  "pros": ["exactly 4 concise pro points"],
-  "cons": ["exactly 3 concise con points"],
-  "expertSummary": "A 2-3 sentence expert summary"
-}
-Only output valid JSON.`,
+          content: `You are a product review expert. Given a product's details, generate a balanced AI review.\nReturn ONLY valid JSON with this shape:\n{\n  "pros": ["exactly 4 concise pro points"],\n  "cons": ["exactly 3 concise con points"],\n  "expertSummary": "A 2-3 sentence expert summary"\n}\nOnly output valid JSON.`,
         },
         {
           role: 'user',
@@ -151,6 +165,14 @@ Only output valid JSON.`,
 
     const content = completion.choices[0].message.content.trim();
     const parsed = JSON.parse(content);
+
+    if (!parsed || !Array.isArray(parsed.pros) || !Array.isArray(parsed.cons)) {
+      throw new Error('Invalid AI review structure')
+    }
+    if (!parsed.expertSummary) parsed.expertSummary = ''
+    // Ensure exactly 4 pros and 3 cons
+    parsed.pros = parsed.pros.slice(0, 4)
+    parsed.cons = parsed.cons.slice(0, 3)
 
     const aiReview = await AiReview.findOneAndUpdate(
       { productId },
@@ -184,8 +206,14 @@ export const generateCategoryInsight = async (categorySlug) => {
     const category = await Category.findOne({ slug: categorySlug });
     if (!category) return null;
 
-    const completion = await openai.chat.completions.create({
+    // subcategories live in a separate collection — use name safely with fallback
+    const subcategoryNames = Array.isArray(category.subcategories) && category.subcategories.length > 0
+      ? category.subcategories.join(', ')
+      : 'none';
+
+    const completion = await callOpenAIWithRetry({
       model: config.OPENAI_MODEL,
+      max_tokens: 1000,
       temperature: 0.6,
       messages: [
         {
@@ -194,7 +222,7 @@ export const generateCategoryInsight = async (categorySlug) => {
         },
         {
           role: 'user',
-          content: `Category: ${category.name} (subcategories: ${category.subcategories.join(', ') || 'none'})`,
+          content: `Category: ${category.name} (subcategories: ${subcategoryNames})`,
         },
       ],
     });
@@ -229,8 +257,9 @@ export const generateSearchExpertSummary = async (query, products) => {
       rating: p.rating,
     }));
 
-    const completion = await openai.chat.completions.create({
+    const completion = await callOpenAIWithRetry({
       model: config.OPENAI_MODEL,
+      max_tokens: 1000,
       temperature: 0.5,
       messages: [
         {

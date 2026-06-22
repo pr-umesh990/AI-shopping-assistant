@@ -25,6 +25,8 @@ const searchQuerySchema = new mongoose.Schema({
 });
 
 searchQuerySchema.index({ searchedAt: -1 });
+searchQuerySchema.index({ userId: 1, searchedAt: -1 });
+searchQuerySchema.index({ rawQuery: 1 });
 
 const SearchQuery = mongoose.model('SearchQuery', searchQuerySchema);
 

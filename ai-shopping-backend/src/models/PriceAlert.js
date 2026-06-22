@@ -30,6 +30,7 @@ const priceAlertSchema = new mongoose.Schema(
 
 priceAlertSchema.index({ userId: 1, productId: 1 });
 priceAlertSchema.index({ triggered: 1 });
+priceAlertSchema.index({ triggered: 1, targetPrice: 1 });
 
 const PriceAlert = mongoose.model('PriceAlert', priceAlertSchema);
 
