@@ -6,20 +6,20 @@ import startAlertNotifierJob from './jobs/alertNotifier.job.js';
 
 const PORT = config.PORT;
 
-// ── Unhandled Rejection Handler ──
+//  Unhandled Rejection Handler 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ UNHANDLED REJECTION:', reason);
+  console.error(' UNHANDLED REJECTION:', reason);
   console.error('Promise:', promise);
   process.exit(1);
 });
 
-// ── Uncaught Exception Handler ──
+//  Uncaught Exception Handler 
 process.on('uncaughtException', (error) => {
-  console.error('❌ UNCAUGHT EXCEPTION:', error);
+  console.error('UNCAUGHT EXCEPTION:', error);
   process.exit(1);
 });
 
-// ── Start Server ──
+//  Start Server 
 const startServer = async () => {
   try {
     // Connect to MongoDB
@@ -27,26 +27,26 @@ const startServer = async () => {
 
     // Start Express server
     const server = app.listen(PORT, () => {
-      console.log(`🚀 SmartShop AI server running on port ${PORT} in ${config.NODE_ENV} mode`);
-      console.log(`📡 API base: http://localhost:${PORT}/api/v1`);
-      console.log(`❤️  Health check: http://localhost:${PORT}/api/v1/health`);
+      console.log(` SmartShop AI server running on port ${PORT} in ${config.NODE_ENV} mode`);
+      console.log(` API base: http://localhost:${PORT}/api/v1`);
+      console.log(` Health check: http://localhost:${PORT}/api/v1/health`);
     });
 
     // Start background cron jobs after DB is connected
     startPriceTrackerJob();
     startAlertNotifierJob();
 
-    // ── Graceful Shutdown ──
+    // Graceful Shutdown 
     const gracefulShutdown = async (signal) => {
-      console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
+      console.log(`\n ${signal} received. Shutting down gracefully...`);
 
       server.close(async () => {
-        console.log('🔌 HTTP server closed.');
+        console.log('HTTP server closed.');
 
         try {
           const mongoose = await import('mongoose');
           await mongoose.default.connection.close();
-          console.log('🔌 MongoDB connection closed.');
+          console.log('MongoDB connection closed.');
         } catch (err) {
           console.error('Error closing MongoDB connection:', err.message);
         }
@@ -56,7 +56,7 @@ const startServer = async () => {
 
       // Force exit after 10s if graceful shutdown hangs
       setTimeout(() => {
-        console.error('⚠️  Forced shutdown after timeout.');
+        console.error('Forced shutdown after timeout.');
         process.exit(1);
       }, 10000);
     };
@@ -64,7 +64,7 @@ const startServer = async () => {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('Failed to start server:', error.message);
     process.exit(1);
   }
 };

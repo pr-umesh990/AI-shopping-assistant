@@ -10,10 +10,10 @@ import { errorResponse } from './utils/apiResponse.js';
 
 const app = express();
 
-// ── Security Headers ──
+// Security Headers
 app.use(helmet());
 
-// ── CORS ──
+// CORS
 app.use(
   cors({
     origin: config.FRONTEND_URL,
@@ -21,31 +21,31 @@ app.use(
   })
 );
 
-// ── Body Parsing ──
+// Body Parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ── Request Logging ──
+// Request Logging
 if (config.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// ── Rate Limiters ──
+//  Rate Limiters
 app.use(generalLimiter);
 app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/search', searchLimiter);
 
-// ── Routes ──
+// Routes
 app.use('/api/v1', routes);
 
-// ── 404 Handler ──
+// 404 Handler
 app.use((req, res) => {
   errorResponse(res, 404, `Route ${req.originalUrl} not found.`);
 });
 
-// ── Global Error Handler (must be last) ──
+// Global Error Handler (must be last)
 app.use(errorMiddleware);
 
 export default app;

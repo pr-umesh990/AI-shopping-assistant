@@ -68,7 +68,7 @@ const startAlertNotifierJob = () => {
     );
   });
 
-  console.log('⏰ Alert Notifier job scheduled (every 15 minutes)');
+  console.log('Alert Notifier job scheduled (every 15 minutes)');
 };
 
 export default startAlertNotifierJob;
