@@ -11,8 +11,8 @@ for (const varName of requiredVars) {
   }
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn(' WARNING: OPENAI_API_KEY is not set. AI features will be unavailable.');
+if (!process.env.GEMINI_API_KEY) {
+  console.warn(' WARNING: GEMINI_API_KEY is not set. AI features will be unavailable.');
 }
 
 const config = Object.freeze({
@@ -21,8 +21,8 @@ const config = Object.freeze({
   MONGODB_URI: process.env.MONGODB_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
-  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
