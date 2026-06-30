@@ -88,17 +88,42 @@ export const getAffiliateMilestone = asyncHandler(async (req, res) => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const currentClicks = await AffiliateClick.countDocuments({
+  // Fetch all clicks for the current month with product currentPrice
+  const clicks = await AffiliateClick.find({
     clickedAt: { $gte: monthStart },
-  });
+  })
+    .populate('productId', 'currentPrice')
+    .lean();
 
-  const goalClicks = config.MONTHLY_AFFILIATE_GOAL;
-  const percentage = Math.min(100, Math.round((currentClicks / goalClicks) * 100));
+  const totalRevenue = clicks.reduce((sum, c) => {
+    const price = c.productId?.currentPrice || 0;
+    return sum + (price * config.COMMISSION_RATE_DEFAULT);
+  }, 0);
+
+  // Construct retailer breakdown
+  const breakdownMap = {};
+  for (const c of clicks) {
+    const price = c.productId?.currentPrice || 0;
+    const rev = price * config.COMMISSION_RATE_DEFAULT;
+    const retailerName = c.retailer || 'Unknown';
+    if (!breakdownMap[retailerName]) {
+      breakdownMap[retailerName] = { retailer: retailerName, revenue: 0 };
+    }
+    breakdownMap[retailerName].revenue += rev;
+  }
+  const breakdown = Object.values(breakdownMap).map(b => ({
+    retailer: b.retailer,
+    revenue: Math.round(b.revenue * 100) / 100
+  }));
+
+  const target = config.MONTHLY_AFFILIATE_GOAL;
+  const percentage = Math.min(100, Math.round((totalRevenue / target) * 100)) || 0;
 
   return successResponse(res, 200, 'Affiliate milestone retrieved.', {
-    currentClicks,
-    goalClicks,
+    current: Math.round(totalRevenue * 100) / 100,
+    target,
     percentage,
+    breakdown,
   });
 });
 

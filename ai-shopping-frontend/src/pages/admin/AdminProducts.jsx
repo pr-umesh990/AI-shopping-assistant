@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ProductTable from '../../components/admin/ProductTable.jsx'
@@ -13,6 +13,7 @@ const AdminProducts = () => {
   const [modal, setModal] = useState({ open: false, product: null })
   const [filters, setFilters] = useState({ search: '', status: '' })
   const [page, setPage] = useState(1)
+  const searchTimerRef = useRef(null)
 
   const fetch = async () => {
     setLoading(true)
@@ -24,15 +25,15 @@ const AdminProducts = () => {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetch() }, [page, filters.status])
+  useEffect(() => { fetch() }, [page, filters.status, filters.search])
 
-  let searchTimer
   const handleSearchChange = (val) => {
-    clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current)
+    }
+    searchTimerRef.current = setTimeout(() => {
       setFilters(f => ({ ...f, search: val }))
       setPage(1)
-      fetch()
     }, 400)
   }
 

@@ -16,14 +16,14 @@ const ProductCard = ({ product, showCompare = true, showWishlist = true, fullWid
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { add: addCompare, isInCompare } = useCompare()
-  const { increment } = useWishlist()
+  const { items: wishlistItems, addToWishlistLocal } = useWishlist()
   const [wishlistLoading, setWishlistLoading] = useState(false)
-  const [wishlisted, setWishlisted] = useState(false)
 
   if (!product) return null
 
   const imgSrc = product.images?.[0] || PLACEHOLDER
   const inCompare = isInCompare(product._id)
+  const wishlisted = wishlistItems.some(i => (i.productId?._id || i.productId || i._id || i) === product._id)
 
   const handleWishlist = async (e) => {
     e.stopPropagation()
@@ -36,12 +36,11 @@ const ProductCard = ({ product, showCompare = true, showWishlist = true, fullWid
     setWishlistLoading(true)
     try {
       await addToWishlist(product._id)
-      setWishlisted(true)
-      increment()
+      addToWishlistLocal({ productId: product._id })
       toast.success('Added to wishlist!')
     } catch (err) {
       if (err.response?.status === 409) {
-        setWishlisted(true)
+        addToWishlistLocal({ productId: product._id })
         toast('Already in your wishlist.', { icon: '💙' })
       } else {
         toast.error('Could not add to wishlist.')

@@ -71,8 +71,8 @@ export const cache = (ttlSeconds = 300) => {
     const originalJson = res.json.bind(res);
 
     res.json = (body) => {
-      // Cache the response asynchronously
-      if (redisAvailable && redisClient) {
+      // Cache only successful responses (2xx)
+      if (redisAvailable && redisClient && res.statusCode >= 200 && res.statusCode < 300) {
         redisClient
           .setex(cacheKey, ttlSeconds, JSON.stringify(body))
           .catch((err) => console.warn(`Redis cache write error: ${err.message}`));

@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { Sparkles, Heart, LayoutDashboard, ChevronDown, Menu, X, LogOut, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useWishlist } from '../../hooks/useWishlist.js'
-import { getCategories } from '../../api/axios.js'
+import { getCategories, getWishlist } from '../../api/axios.js'
 import SearchBar from '../search/SearchBar.jsx'
 
 const Navbar = () => {
   const navigate = useNavigate()
   const { isAuthenticated, user, logout } = useAuth()
-  const { count: wishlistCount } = useWishlist()
+  const { count: wishlistCount, setWishlistItems } = useWishlist()
   const [catOpen, setCatOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -20,6 +20,19 @@ const Navbar = () => {
   useEffect(() => {
     getCategories().then(r => setCategories(r.data?.data?.categories || [])).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      getWishlist({ limit: 100 })
+        .then(res => {
+          const list = res.data?.data?.items || res.data?.data?.wishlist || []
+          setWishlistItems(list)
+        })
+        .catch(() => {})
+    } else {
+      setWishlistItems([])
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     const handleClick = (e) => {

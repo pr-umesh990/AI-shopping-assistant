@@ -26,9 +26,24 @@ export const getWishlist = asyncHandler(async (req, res) => {
     .sort({ savedAt: -1 })
     .lean();
 
+  // Filter out and delete dangling wishlist items (where productId has been deleted)
+  const validWishlistItems = [];
+  const danglingIds = [];
+  for (const item of wishlistItems) {
+    if (item.productId) {
+      validWishlistItems.push(item);
+    } else {
+      danglingIds.push(item._id);
+    }
+  }
+
+  if (danglingIds.length > 0) {
+    await Wishlist.deleteMany({ _id: { $in: danglingIds } });
+  }
+
   // Calculate price drop for each item and apply filter
-  let items = wishlistItems.map((item) => {
-    const currentPrice = item.productId?.currentPrice || item.currentPrice || item.priceAtSave;
+  let items = validWishlistItems.map((item) => {
+    const currentPrice = item.productId.currentPrice || item.currentPrice || item.priceAtSave;
     const priceDrop = getPriceDrop(item.priceAtSave, currentPrice);
 
     return {
@@ -46,9 +61,9 @@ export const getWishlist = asyncHandler(async (req, res) => {
   }
 
   // Aggregate stats
-  const totalTracked = wishlistItems.length;
-  const potentialSavings = wishlistItems.reduce((sum, item) => {
-    const currentPrice = item.productId?.currentPrice || item.priceAtSave;
+  const totalTracked = validWishlistItems.length;
+  const potentialSavings = validWishlistItems.reduce((sum, item) => {
+    const currentPrice = item.productId.currentPrice || item.priceAtSave;
     const savings = item.priceAtSave - currentPrice;
     return sum + (savings > 0 ? savings : 0);
   }, 0);
@@ -57,6 +72,7 @@ export const getWishlist = asyncHandler(async (req, res) => {
 
   return successResponse(res, 200, 'Wishlist retrieved.', {
     items,
+    wishlist: items,
     stats: {
       totalTracked,
       potentialSavings: Math.round(potentialSavings * 100) / 100,
@@ -126,7 +142,7 @@ export const removeFromWishlist = asyncHandler(async (req, res) => {
 export const toggleAlert = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { productId } = req.params;
-  const { enabled } = req.body;
+  const { enabled, targetPrice } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     return errorResponse(res, 400, 'Invalid ID format.');
@@ -134,6 +150,11 @@ export const toggleAlert = asyncHandler(async (req, res) => {
 
   if (typeof enabled !== 'boolean') {
     return errorResponse(res, 400, 'Field "enabled" must be a boolean.');
+  }
+
+  const product = await Product.findById(productId).select('currentPrice').lean();
+  if (!product) {
+    return errorResponse(res, 404, 'Product not found.');
   }
 
   const wishlistItem = await Wishlist.findOneAndUpdate(
@@ -144,6 +165,18 @@ export const toggleAlert = asyncHandler(async (req, res) => {
 
   if (!wishlistItem) {
     return errorResponse(res, 404, 'Product not found in wishlist.');
+  }
+
+  // Manage target PriceAlert records
+  if (enabled) {
+    const target = targetPrice !== undefined && targetPrice !== '' ? Number(targetPrice) : product.currentPrice;
+    await PriceAlert.findOneAndUpdate(
+      { userId, productId },
+      { targetPrice: target, triggered: false },
+      { upsert: true, new: true }
+    );
+  } else {
+    await PriceAlert.deleteOne({ userId, productId });
   }
 
   return successResponse(res, 200, `Price alert ${enabled ? 'enabled' : 'disabled'}.`, { wishlistItem });

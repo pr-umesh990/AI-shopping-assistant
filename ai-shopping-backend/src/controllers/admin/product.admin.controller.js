@@ -89,6 +89,12 @@ export const createProduct = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, 'Invalid category ID format.');
   }
 
+  // Validate category existence
+  const categoryExists = await Category.findById(categoryId).lean();
+  if (!categoryExists) {
+    return errorResponse(res, 404, 'Category not found.');
+  }
+
   // Validate subcategoryId if provided
   let resolvedSubcategoryId = null;
   if (subcategoryId) {
@@ -141,12 +147,12 @@ export const createProduct = asyncHandler(async (req, res) => {
   // Create initial price history record
   await recordPrice(product._id, currentPrice, 'admin');
 
-  // Increment category productCount
-  await Category.findByIdAndUpdate(categoryId, { $inc: { productCount: 1 } });
-
-  // Increment subcategory productCount if applicable
-  if (resolvedSubcategoryId) {
-    await Subcategory.findByIdAndUpdate(resolvedSubcategoryId, { $inc: { productCount: 1 } });
+  // Increment category and subcategory productCount if active
+  if (product.status !== 'disabled') {
+    await Category.findByIdAndUpdate(categoryId, { $inc: { productCount: 1 } });
+    if (resolvedSubcategoryId) {
+      await Subcategory.findByIdAndUpdate(resolvedSubcategoryId, { $inc: { productCount: 1 } });
+    }
   }
 
   return successResponse(res, 201, 'Product created successfully.', { product });
@@ -171,54 +177,99 @@ export const updateProduct = asyncHandler(async (req, res) => {
   const oldPrice = existingProduct.currentPrice;
   const oldCategoryId = existingProduct.categoryId?.toString();
   const oldSubcategoryId = existingProduct.subcategoryId?.toString() || null;
+  const oldStatus = existingProduct.status;
 
-  // Handle subcategoryId change if included in request body
+  const newStatus = req.body.status !== undefined ? req.body.status : oldStatus;
+  const newCategoryId = req.body.categoryId !== undefined ? req.body.categoryId : oldCategoryId;
+  const newSubcategoryId = req.body.subcategoryId !== undefined ? (req.body.subcategoryId || null) : oldSubcategoryId;
+
+  // Validate category if changing
+  if (req.body.categoryId !== undefined && req.body.categoryId !== oldCategoryId) {
+    if (!mongoose.Types.ObjectId.isValid(newCategoryId)) {
+      return errorResponse(res, 400, 'Invalid category ID format.');
+    }
+    const categoryExists = await Category.findById(newCategoryId).lean();
+    if (!categoryExists) {
+      return errorResponse(res, 404, 'Category not found.');
+    }
+  }
+
+  // Validate subcategory if changing
   if (req.body.subcategoryId !== undefined) {
-    const newSubcategoryId = req.body.subcategoryId || null;
-
     if (newSubcategoryId) {
       if (!mongoose.Types.ObjectId.isValid(newSubcategoryId)) {
         return errorResponse(res, 400, 'Invalid subcategory ID format.');
       }
-
-      const newCategoryId = req.body.categoryId || existingProduct.categoryId;
       const subcategory = await Subcategory.findById(newSubcategoryId).lean();
-
       if (!subcategory) {
         return errorResponse(res, 400, 'Subcategory not found.');
       }
-
       if (subcategory.categoryId.toString() !== newCategoryId.toString()) {
         return errorResponse(res, 400, 'Subcategory does not belong to selected category.');
       }
     }
-
-    // Decrement old subcategory productCount
-    if (oldSubcategoryId && oldSubcategoryId !== (newSubcategoryId || null)?.toString()) {
-      await Subcategory.findByIdAndUpdate(oldSubcategoryId, {
-        $inc: { productCount: -1 },
-      });
-    }
-
-    // Increment new subcategory productCount
-    if (newSubcategoryId && oldSubcategoryId !== newSubcategoryId) {
-      await Subcategory.findByIdAndUpdate(newSubcategoryId, {
-        $inc: { productCount: 1 },
-      });
-    }
-
-    existingProduct.subcategoryId = newSubcategoryId;
   }
 
-  // Handle categoryId change
-  if (req.body.categoryId !== undefined && req.body.categoryId !== oldCategoryId) {
-    if (!mongoose.Types.ObjectId.isValid(req.body.categoryId)) {
-      return errorResponse(res, 400, 'Invalid category ID format.');
+  // Sync category and subcategory productCount
+  const wasActive = oldStatus !== 'disabled';
+  const isNowActive = newStatus !== 'disabled';
+
+  if (wasActive && !isNowActive) {
+    // Went active -> disabled: decrement old category
+    if (oldCategoryId) {
+      const cat = await Category.findById(oldCategoryId);
+      if (cat) {
+        cat.productCount = Math.max(0, (cat.productCount || 0) - 1);
+        await cat.save();
+      }
     }
-    await Category.findByIdAndUpdate(oldCategoryId, { $inc: { productCount: -1 } });
-    await Category.findByIdAndUpdate(req.body.categoryId, { $inc: { productCount: 1 } });
-    existingProduct.categoryId = req.body.categoryId;
+    if (oldSubcategoryId) {
+      const sub = await Subcategory.findById(oldSubcategoryId);
+      if (sub) {
+        sub.productCount = Math.max(0, (sub.productCount || 0) - 1);
+        await sub.save();
+      }
+    }
+  } else if (!wasActive && isNowActive) {
+    // Went disabled -> active: increment new category
+    if (newCategoryId) {
+      await Category.findByIdAndUpdate(newCategoryId, { $inc: { productCount: 1 } });
+    }
+    if (newSubcategoryId) {
+      await Subcategory.findByIdAndUpdate(newSubcategoryId, { $inc: { productCount: 1 } });
+    }
+  } else if (wasActive && isNowActive) {
+    // Category changed while active
+    if (oldCategoryId !== newCategoryId) {
+      if (oldCategoryId) {
+        const cat = await Category.findById(oldCategoryId);
+        if (cat) {
+          cat.productCount = Math.max(0, (cat.productCount || 0) - 1);
+          await cat.save();
+        }
+      }
+      if (newCategoryId) {
+        await Category.findByIdAndUpdate(newCategoryId, { $inc: { productCount: 1 } });
+      }
+    }
+    // Subcategory changed while active
+    if (oldSubcategoryId !== newSubcategoryId) {
+      if (oldSubcategoryId) {
+        const sub = await Subcategory.findById(oldSubcategoryId);
+        if (sub) {
+          sub.productCount = Math.max(0, (sub.productCount || 0) - 1);
+          await sub.save();
+        }
+      }
+      if (newSubcategoryId) {
+        await Subcategory.findByIdAndUpdate(newSubcategoryId, { $inc: { productCount: 1 } });
+      }
+    }
   }
+
+  // Update existingProduct object
+  existingProduct.categoryId = newCategoryId;
+  existingProduct.subcategoryId = newSubcategoryId;
 
   // Apply remaining allowed field updates
   const allowedFields = [
@@ -270,12 +321,20 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Product not found.');
   }
 
+  if (product.status === 'disabled') {
+    return errorResponse(res, 400, 'Product is already disabled.');
+  }
+
   product.status = 'disabled';
   await product.save();
 
-  // Decrement category productCount
+  // Decrement category productCount (floor at 0)
   if (product.categoryId) {
-    await Category.findByIdAndUpdate(product.categoryId, { $inc: { productCount: -1 } });
+    const cat = await Category.findById(product.categoryId);
+    if (cat) {
+      cat.productCount = Math.max(0, (cat.productCount || 0) - 1);
+      await cat.save();
+    }
   }
 
   // Decrement subcategory productCount (floor at 0)

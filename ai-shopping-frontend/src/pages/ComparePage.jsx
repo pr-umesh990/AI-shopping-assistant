@@ -33,7 +33,7 @@ const ComparePage = () => {
       const data = cRes.data?.data
       setProducts(data?.products || [])
       setSpecRows(data?.specRows || [])
-      setVerdict(vRes?.data?.data?.verdict || null)
+      setVerdict(vRes?.data?.data?.verdict || vRes?.data?.data || null)
     }).catch(() => {
       toast.error('Could not load comparison.')
     }).finally(() => setLoading(false))
@@ -74,7 +74,7 @@ const ComparePage = () => {
         <LoadingSpinner fullPage />
       ) : (
         <>
-          {verdict && <AIVerdict verdict={verdict} />}
+          {verdict && <AIVerdict verdict={verdict} products={products} />}
           {products.length > 0 && <CompareTable products={products} specRows={specRows} />}
         </>
       )}

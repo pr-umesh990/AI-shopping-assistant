@@ -46,4 +46,28 @@ export const protect = async (req, res, next) => {
   }
 };
 
+export const optionalProtect = async (req, res, next) => {
+  try {
+    let token = null;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, config.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-passwordHash');
+      if (user) {
+        req.user = {
+          id: decoded.id,
+          role: decoded.role,
+        };
+      }
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 export default protect;

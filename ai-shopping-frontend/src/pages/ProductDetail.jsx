@@ -21,13 +21,13 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { add: addCompare } = useCompare()
-  const { increment } = useWishlist()
+  const { items: wishlistItems, addToWishlistLocal } = useWishlist()
   const [product, setProduct] = useState(null)
   const [history, setHistory] = useState([])
   const [review, setReview] = useState(null)
   const [alternatives, setAlternatives] = useState([])
   const [loading, setLoading] = useState(true)
-  const [wishlisted, setWishlisted] = useState(false)
+  const wishlisted = wishlistItems.some(i => (i.productId?._id || i.productId || i._id || i) === id)
 
   useEffect(() => {
     setLoading(true)
@@ -67,11 +67,13 @@ const ProductDetail = () => {
     if (wishlisted) return
     try {
       await addToWishlist(product._id)
-      setWishlisted(true)
-      increment()
+      addToWishlistLocal({ productId: product._id })
       toast.success('Added to wishlist!')
     } catch (err) {
-      if (err.response?.status === 409) { setWishlisted(true); toast('Already in your wishlist.', { icon:'💙' }) }
+      if (err.response?.status === 409) {
+        addToWishlistLocal({ productId: product._id })
+        toast('Already in your wishlist.', { icon:'💙' })
+      }
       else toast.error('Could not add to wishlist.')
     }
   }

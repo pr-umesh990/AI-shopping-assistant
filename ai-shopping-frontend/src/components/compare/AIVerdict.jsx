@@ -1,9 +1,12 @@
 import { Sparkles, Award, TrendingUp } from 'lucide-react'
 
-const AIVerdict = ({ verdict }) => {
+const AIVerdict = ({ verdict, products = [] }) => {
   if (!verdict) return null
 
-  const findProductName = (pick) => pick?.reason || ''
+  const getProductName = (productId) => {
+    const prod = products.find(p => p._id === productId)
+    return prod ? `${prod.brand} ${prod.name}` : productId
+  }
 
   return (
     <div className="ai-verdict">
@@ -23,7 +26,7 @@ const AIVerdict = ({ verdict }) => {
               <Award size={11} style={{ display:'inline', marginRight:4 }} />
               Best Overall
             </div>
-            <div className="verdict-pick-name">{verdict.proPick.productId}</div>
+            <div className="verdict-pick-name">{getProductName(verdict.proPick.productId)}</div>
             <div className="verdict-pick-reason">{verdict.proPick.reason}</div>
           </div>
         )}
@@ -33,7 +36,7 @@ const AIVerdict = ({ verdict }) => {
               <TrendingUp size={11} style={{ display:'inline', marginRight:4 }} />
               Best Value
             </div>
-            <div className="verdict-pick-name">{verdict.budgetPick.productId}</div>
+            <div className="verdict-pick-name">{getProductName(verdict.budgetPick.productId)}</div>
             <div className="verdict-pick-reason">{verdict.budgetPick.reason}</div>
           </div>
         )}

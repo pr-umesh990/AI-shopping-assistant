@@ -119,6 +119,13 @@ export const getAiVerdict = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, 'Please provide between 2 and 4 product IDs.');
   }
 
+  // Validate all IDs
+  for (const id of idArray) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse(res, 400, `Invalid ID format: ${id}`);
+    }
+  }
+
   const cacheKey = `compare:verdict:${idArray.sort().join(',')}`;
 
   // Check Redis cache
@@ -149,9 +156,11 @@ export const getAiVerdict = asyncHandler(async (req, res) => {
   }
 
   const responseData = {
-    narrative: verdict.narrative,
-    proPick: verdict.proPick,
-    budgetPick: verdict.budgetPick,
+    verdict: {
+      narrative: verdict.narrative,
+      proPick: verdict.proPick,
+      budgetPick: verdict.budgetPick,
+    }
   };
 
   // Cache for 1 hour

@@ -6,12 +6,17 @@ import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import { paginate } from '../utils/pagination.js';
 import { interpretSearchQuery, generateSearchExpertSummary } from '../services/ai.service.js';
 
+// Helper to escape regex special characters
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+};
+
 /**
  * @route   POST /api/v1/search
  * @desc    AI-powered product search
  */
 export const search = asyncHandler(async (req, res) => {
-  const { query: rawQuery, page, limit } = req.body;
+  const { query: rawQuery, page, limit, sort, brands, priceMin, priceMax, rating } = req.body;
 
   if (!rawQuery || rawQuery.length < 2 || rawQuery.length > 500) {
     return errorResponse(res, 400, 'Search query must be between 2 and 500 characters.');
@@ -20,7 +25,7 @@ export const search = asyncHandler(async (req, res) => {
   // Get AI interpretation of the search query
   const interpretation = await interpretSearchQuery(rawQuery);
 
-  // Build MongoDB query from AI-extracted filters
+  // Build MongoDB query from AI-extracted and manual filters
   const mongoQuery = { status: 'active' };
   const filters = interpretation.filters || {};
 
@@ -29,7 +34,7 @@ export const search = asyncHandler(async (req, res) => {
     const cat = await Category.findOne({
       $or: [
         { slug: filters.category.toLowerCase() },
-        { name: { $regex: filters.category, $options: 'i' } },
+        { name: { $regex: escapeRegex(filters.category), $options: 'i' } },
       ],
     })
       .select('_id')
@@ -40,16 +45,29 @@ export const search = asyncHandler(async (req, res) => {
     }
   }
 
-  // Brands filter
-  if (filters.brands && Array.isArray(filters.brands) && filters.brands.length > 0) {
-    mongoQuery.brand = { $in: filters.brands.map((b) => new RegExp(b, 'i')) };
+  // Brands filter (Manual overrides AI)
+  const finalBrands = (brands && Array.isArray(brands) && brands.length > 0)
+    ? brands
+    : (filters.brands && Array.isArray(filters.brands) && filters.brands.length > 0 ? filters.brands : []);
+
+  if (finalBrands.length > 0) {
+    mongoQuery.brand = { $in: finalBrands.map((b) => new RegExp(escapeRegex(b), 'i')) };
   }
 
-  // Price range
-  if (filters.priceMin || filters.priceMax) {
+  // Price range (Manual overrides AI)
+  const minPrice = priceMin !== undefined && priceMin !== '' ? parseFloat(priceMin) : filters.priceMin;
+  const maxPrice = priceMax !== undefined && maxPrice !== '' ? parseFloat(priceMax) : filters.priceMax;
+
+  if (minPrice || maxPrice) {
     mongoQuery.currentPrice = {};
-    if (filters.priceMin) mongoQuery.currentPrice.$gte = filters.priceMin;
-    if (filters.priceMax) mongoQuery.currentPrice.$lte = filters.priceMax;
+    if (minPrice) mongoQuery.currentPrice.$gte = Number(minPrice);
+    if (maxPrice) mongoQuery.currentPrice.$lte = Number(maxPrice);
+  }
+
+  // Minimum rating filter (Manual only)
+  const minRating = rating !== undefined && rating !== '' ? parseFloat(rating) : undefined;
+  if (minRating && minRating >= 1 && minRating <= 5) {
+    mongoQuery.rating = { $gte: minRating };
   }
 
   // RAM filter (in specs)
@@ -62,17 +80,37 @@ export const search = asyncHandler(async (req, res) => {
     mongoQuery['specs.battery'] = { $gte: filters.batteryMin };
   }
 
-  // Features filter using useCaseTags or text search
+  // Features filter using useCaseTags
   if (filters.features && Array.isArray(filters.features) && filters.features.length > 0) {
-    mongoQuery.useCaseTags = { $in: filters.features.map((f) => new RegExp(f, 'i')) };
+    mongoQuery.useCaseTags = { $in: filters.features.map((f) => new RegExp(escapeRegex(f), 'i')) };
   }
 
-  // Also apply text search on the raw query for broader matching
-  if (!mongoQuery.categoryId && !mongoQuery.brand) {
+  // Always apply text search on raw query if present to preserve keyword specificity
+  if (rawQuery) {
     mongoQuery.$text = { $search: rawQuery };
   }
 
+  // Sort options
   let sortOptions = { rating: -1 };
+  if (sort) {
+    switch (sort) {
+      case 'price_asc':
+        sortOptions = { currentPrice: 1 };
+        break;
+      case 'price_desc':
+        sortOptions = { currentPrice: -1 };
+        break;
+      case 'rating':
+        sortOptions = { rating: -1 };
+        break;
+      case 'newest':
+        sortOptions = { createdAt: -1 };
+        break;
+      default:
+        sortOptions = { rating: -1 };
+    }
+  }
+
   const result = await paginate(Product, mongoQuery, page, limit, { path: 'categoryId', select: 'name slug' }, sortOptions);
 
   // Save search query asynchronously (fire-and-forget)
@@ -136,7 +174,7 @@ export const getSuggestions = asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Suggestions.', { suggestions: [] });
   }
 
-  const regex = new RegExp(q, 'i');
+  const regex = new RegExp(escapeRegex(q), 'i');
 
   const products = await Product.find({
     status: 'active',

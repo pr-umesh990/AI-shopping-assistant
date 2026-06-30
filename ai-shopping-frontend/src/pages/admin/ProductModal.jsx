@@ -20,6 +20,8 @@ const ProductModal = ({ product, onSave, onClose }) => {
     stock: product?.stock ?? '',
     status: product?.status || 'active',
     images: product?.images?.join('\n') || '',
+    amazonUrl: product?.affiliateLinks?.find(l => l.retailer?.toLowerCase() === 'amazon')?.url || '',
+    flipkartUrl: product?.affiliateLinks?.find(l => l.retailer?.toLowerCase() === 'flipkart')?.url || '',
   })
 
   // Fetch categories on mount
@@ -54,14 +56,19 @@ const ProductModal = ({ product, onSave, onClose }) => {
 
   const handleSubmit = e => {
     e.preventDefault()
+    const { amazonUrl, flipkartUrl, ...rest } = form
     const payload = {
-      ...form,
+      ...rest,
       currentPrice: Number(form.currentPrice),
-      originalPrice: Number(form.originalPrice) || undefined,
+      originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
       stock: Number(form.stock),
       images: form.images.split('\n').map(s => s.trim()).filter(Boolean),
       // Send null if no subcategory selected
       subcategoryId: form.subcategoryId || null,
+      affiliateLinks: [
+        { retailer: 'amazon', url: form.amazonUrl },
+        { retailer: 'flipkart', url: form.flipkartUrl }
+      ].filter(l => l.url.trim() !== '')
     }
     onSave(payload)
   }
@@ -141,6 +148,16 @@ const ProductModal = ({ product, onSave, onClose }) => {
               <div className="form-group">
                 <label className="form-label">Stock</label>
                 <input name="stock" type="number" className="form-input" value={form.stock} onChange={handleChange} min="0" />
+              </div>
+            </div>
+             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Amazon Affiliate URL</label>
+                <input name="amazonUrl" className="form-input" value={form.amazonUrl} onChange={handleChange} placeholder="https://amazon.com/..." />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Flipkart Affiliate URL</label>
+                <input name="flipkartUrl" className="form-input" value={form.flipkartUrl} onChange={handleChange} placeholder="https://flipkart.com/..." />
               </div>
             </div>
             <div className="form-group">

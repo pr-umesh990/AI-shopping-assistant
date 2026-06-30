@@ -18,7 +18,7 @@ const TABS = [
 
 const WishlistPage = () => {
   const navigate = useNavigate()
-  const { setCount } = useWishlist()
+  const { setWishlistItems, removeFromWishlistLocal } = useWishlist()
   const [items, setItems] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -39,9 +39,9 @@ const WishlistPage = () => {
       getWishlist({ limit: 50 }),
       getWishlistRecommendations().catch(() => null),
     ]).then(([wRes, rRes]) => {
-      const list = wRes.data?.data?.wishlist || []
+      const list = wRes.data?.data?.items || wRes.data?.data?.wishlist || []
       setItems(list)
-      setCount(list.length)
+      setWishlistItems(list)
       setRecommendations(rRes?.data?.data?.recommendations || [])
     }).catch(() => {
       toast.error('Could not load wishlist.')
@@ -52,7 +52,7 @@ const WishlistPage = () => {
     try {
       await removeFromWishlist(productId)
       setItems(prev => prev.filter(i => (i.productId?._id || i.productId) !== productId))
-      setCount(c => Math.max(0, c - 1))
+      removeFromWishlistLocal(productId)
       toast.success('Removed from wishlist.')
     } catch {
       toast.error('Could not remove item.')

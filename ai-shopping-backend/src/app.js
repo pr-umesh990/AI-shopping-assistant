@@ -36,6 +36,9 @@ if (config.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Trust Proxy for correct rate limit IP extraction
+app.set('trust proxy', 1);
+
 //  Rate Limiters
 app.use(generalLimiter);
 app.use('/api/v1/auth', authLimiter);

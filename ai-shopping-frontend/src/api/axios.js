@@ -90,6 +90,7 @@ export const deleteAdminProduct = (id) => axios.delete(`/admin/products/${id}`)
 export const getRevenueByCategory = () => axios.get('/admin/analytics/revenue-by-category')
 export const getTrafficChannels = () => axios.get('/admin/analytics/traffic-channels')
 export const getAffiliateMilestone = () => axios.get('/admin/analytics/affiliate-milestone')
+export const exportReport = (params) => axios.get('/admin/reports/export', { params, responseType: 'blob' })
 
 export const getAdminCategories = (params) => axios.get('/admin/categories', { params })
 export const createAdminCategory = (data) => axios.post('/admin/categories', data)

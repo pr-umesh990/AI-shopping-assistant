@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Category from '../../models/Category.js';
 import Subcategory from '../../models/Subcategory.js';
 import Product from '../../models/Product.js';
@@ -73,6 +74,10 @@ export const updateAdminCategory = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, icon, description } = req.body;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return errorResponse(res, 400, 'Invalid category ID format.');
+  }
+
   const category = await Category.findById(id);
   if (!category) {
     return errorResponse(res, 404, 'Category not found.');
@@ -103,6 +108,10 @@ export const updateAdminCategory = asyncHandler(async (req, res) => {
  */
 export const deleteAdminCategory = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return errorResponse(res, 400, 'Invalid category ID format.');
+  }
 
   const category = await Category.findById(id);
   if (!category) {
