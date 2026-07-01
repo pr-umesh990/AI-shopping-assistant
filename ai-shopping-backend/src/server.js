@@ -8,15 +8,14 @@ const PORT = config.PORT;
 
 //  Unhandled Rejection Handler 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error(' UNHANDLED REJECTION:', reason);
-  console.error('Promise:', promise);
-  process.exit(1);
+  console.error('UNHANDLED REJECTION at:', promise)
+  console.error('Reason:', reason)
 });
 
 //  Uncaught Exception Handler 
 process.on('uncaughtException', (error) => {
   console.error('UNCAUGHT EXCEPTION:', error);
-  process.exit(1);
+  // process.exit(1);
 });
 
 //  Start Server 

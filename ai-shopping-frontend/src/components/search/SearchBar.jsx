@@ -47,6 +47,15 @@ const SearchBar = ({ large = false, onSearch }) => {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Cleanup debounce timer on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
   return (
     <div className={`search-bar${large ? ' large' : ''}`} ref={containerRef} style={{ width: '100%' }}>
       <input

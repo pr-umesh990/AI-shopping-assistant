@@ -3,6 +3,7 @@ import config from '../config/env.js';
 import Product from '../models/Product.js';
 import AiReview from '../models/AiReview.js';
 import Category from '../models/Category.js';
+import Subcategory from '../models/Subcategory.js';
 
 let geminiModel = null;
 
@@ -223,11 +224,15 @@ export const generateCategoryInsight = async (categorySlug) => {
     const category = await Category.findOne({ slug: categorySlug });
     if (!category) return null;
 
-    // subcategories live in a separate collection — use name safely with fallback
-    const subcategoryNames =
-      Array.isArray(category.subcategories) && category.subcategories.length > 0
-        ? category.subcategories.join(', ')
-        : 'none';
+    // Fetch actual subcategories from separate collection
+    const subcategoryDocs = await Subcategory.find({
+      categoryId: category._id,
+      isActive: true
+    }).select('name').lean();
+
+    const subcategoryNames = subcategoryDocs.length > 0
+      ? subcategoryDocs.map(s => s.name).join(', ')
+      : 'none';
 
     const systemPrompt =
       'You are a market analyst. Given a product category, provide a 2-3 sentence market insight about current trends, popular features, and buying advice. Return only the insight text, no JSON.';

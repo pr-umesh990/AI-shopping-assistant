@@ -183,9 +183,9 @@ const ProductDetail = () => {
             </div>
 
             {/* Tags */}
-            {product.tags?.length > 0 && (
+            {product.useCaseTags?.length > 0 && (
               <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem', marginTop:'1rem' }}>
-                {product.tags.map((t, i) => (
+                {product.useCaseTags.map((t, i) => (
                   <span key={i} style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'var(--gray-100)', color:'var(--gray-600)', padding:'0.2rem 0.6rem', borderRadius:'999px', fontSize:'0.75rem' }}>
                     <Tag size={10} /> {t}
                   </span>

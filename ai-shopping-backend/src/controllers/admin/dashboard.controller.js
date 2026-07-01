@@ -15,7 +15,7 @@ export const getStats = asyncHandler(async (req, res) => {
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
 
-  // ── Affiliate Clicks ──
+  // Affiliate Clicks 
   const currentMonthClicks = await AffiliateClick.countDocuments({
     clickedAt: { $gte: currentMonthStart },
   });
@@ -26,7 +26,7 @@ export const getStats = asyncHandler(async (req, res) => {
     ? Math.round(((currentMonthClicks - previousMonthClicks) / previousMonthClicks) * 100)
     : currentMonthClicks > 0 ? 100 : 0;
 
-  // ── Revenue Estimation ──
+  // Revenue Estimation 
   // Revenue = clicks × commission rate × average product price
   const avgPriceResult = await Product.aggregate([
     { $match: { status: 'active' } },
@@ -40,7 +40,7 @@ export const getStats = asyncHandler(async (req, res) => {
     ? Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 100)
     : totalRevenue > 0 ? 100 : 0;
 
-  // ── Active Users ──
+  // Active Users 
   const activeUsers = await User.countDocuments();
   const usersLastMonth = await User.countDocuments({
     createdAt: { $lte: previousMonthEnd },
@@ -50,7 +50,7 @@ export const getStats = asyncHandler(async (req, res) => {
     ? Math.round((newUsersThisMonth / usersLastMonth) * 100)
     : activeUsers > 0 ? 100 : 0;
 
-  // ── Catalog Size ──
+  //  Catalog Size 
   const catalogSize = await Product.countDocuments();
   const catalogLastMonth = await Product.countDocuments({
     createdAt: { $lte: previousMonthEnd },

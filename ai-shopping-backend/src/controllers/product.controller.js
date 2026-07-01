@@ -141,7 +141,7 @@ export const getProduct = asyncHandler(async (req, res) => {
     .populate('subcategoryId', 'name slug')
     .lean();
 
-  if (!product || product.status === 'disabled') {
+  if (!product || product.status !== 'active') {
     return errorResponse(res, 404, 'Product not found.');
   }
 

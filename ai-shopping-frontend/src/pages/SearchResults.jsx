@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Grid, List, Search as SearchIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -38,6 +38,7 @@ const SearchResults = () => {
   const [filters, setFilters] = useState({})
   const [page, setPage] = useState(1)
   const { items: compareItems } = useCompare()
+  const isMountRef = useRef(true)
 
   const doSearch = useCallback(async (query, pg, currentFilters, sortBy) => {
     if (!query) return
@@ -68,6 +69,10 @@ const SearchResults = () => {
   }, [q])
 
   useEffect(() => {
+    if (isMountRef.current) {
+      isMountRef.current = false
+      return
+    }
     doSearch(q, page, filters, sort)
   }, [page, sort])
 
