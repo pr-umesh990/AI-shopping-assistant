@@ -46,6 +46,11 @@ export const registerUser = (data) => axios.post('/auth/register', data)
 export const loginUser = (data) => axios.post('/auth/login', data)
 export const getMe = () => axios.get('/auth/me')
 export const updateMe = (data) => axios.patch('/auth/me', data)
+export const verifyEmail = (token) => axios.get(`/auth/verify-email/${token}`)
+export const resendVerification = (email) => axios.post('/auth/resend-verification', { email })
+export const forgotPassword = (email) => axios.post('/auth/forgot-password', { email })
+export const resetPassword = (token, password) => axios.post(`/auth/reset-password/${token}`, { password })
+export const changePassword = (data) => axios.patch('/auth/change-password', data)
 
 // Products
 export const getProducts = (params) => axios.get('/products', { params })

@@ -154,3 +154,91 @@ export const sendNewsletterConfirmation = async (email) => {
     console.error(`[Email Service] Failed to send newsletter confirmation to ${email}: ${error.message}`);
   }
 };
+
+/**
+ * Send email verification link
+ */
+export const sendVerificationEmail = async (user, verificationToken) => {
+  if (!config.SENDGRID_API_KEY) {
+    console.warn('[Email Service] SendGrid not configured. Skipping verification email.')
+    console.log(`[DEV] Email verification token for ${user.email}: ${verificationToken}`)
+    return
+  }
+  try {
+    const verifyUrl = `${config.FRONTEND_URL}/verify-email?token=${verificationToken}`
+    const msg = {
+      to: user.email,
+      from: config.FROM_EMAIL,
+      subject: 'Verify your SmartShop AI email address',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f4f6f8;">
+          <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:30px;border-radius:12px 12px 0 0;text-align:center;">
+            <h1 style="color:#fff;margin:0;">Verify Your Email</h1>
+          </div>
+          <div style="background:#fff;padding:30px;border-radius:0 0 12px 12px;">
+            <h2 style="color:#333;">Hi ${user.name}!</h2>
+            <p style="color:#555;line-height:1.6;">Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.</p>
+            <div style="text-align:center;margin:30px 0;">
+              <a href="${verifyUrl}" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">
+                Verify Email Address
+              </a>
+            </div>
+            <p style="color:#888;font-size:13px;">If you did not create an account, you can safely ignore this email.</p>
+            <p style="color:#bbb;font-size:12px;word-break:break-all;">Or copy this link: ${verifyUrl}</p>
+          </div>
+        </body>
+        </html>
+      `,
+    }
+    await sgMail.send(msg)
+    console.log(`[Email Service] Verification email sent to ${user.email}`)
+  } catch (error) {
+    console.error(`[Email Service] Failed to send verification email: ${error.message}`)
+  }
+}
+
+/**
+ * Send password reset email
+ */
+export const sendPasswordResetEmail = async (user, resetToken) => {
+  if (!config.SENDGRID_API_KEY) {
+    console.warn('[Email Service] SendGrid not configured. Skipping reset email.')
+    console.log(`[DEV] Password reset token for ${user.email}: ${resetToken}`)
+    return
+  }
+  try {
+    const resetUrl = `${config.FRONTEND_URL}/reset-password?token=${resetToken}`
+    const msg = {
+      to: user.email,
+      from: config.FROM_EMAIL,
+      subject: 'Reset your SmartShop AI password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f4f6f8;">
+          <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:30px;border-radius:12px 12px 0 0;text-align:center;">
+            <h1 style="color:#fff;margin:0;">Reset Password</h1>
+          </div>
+          <div style="background:#fff;padding:30px;border-radius:0 0 12px 12px;">
+            <h2 style="color:#333;">Hi ${user.name}!</h2>
+            <p style="color:#555;line-height:1.6;">You requested a password reset. Click below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+            <div style="text-align:center;margin:30px 0;">
+              <a href="${resetUrl}" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:14px 32px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;">
+                Reset My Password
+              </a>
+            </div>
+            <p style="color:#888;font-size:13px;">If you did not request this, ignore this email. Your password will not change.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    }
+    await sgMail.send(msg)
+    console.log(`[Email Service] Password reset email sent to ${user.email}`)
+  } catch (error) {
+    console.error(`[Email Service] Failed to send password reset email: ${error.message}`)
+  }
+}
+

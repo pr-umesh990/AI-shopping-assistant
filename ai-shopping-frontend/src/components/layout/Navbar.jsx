@@ -118,6 +118,9 @@ const Navbar = () => {
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--gray-800)' }}>{user?.name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>{user?.email}</div>
                   </div>
+                  <button className="dropdown-item" onClick={() => { navigate('/profile'); setUserOpen(false) }}>
+                    <User size={15} /> My Profile
+                  </button>
                   <button className="dropdown-item" onClick={() => { navigate('/wishlist'); setUserOpen(false) }}>
                     <Heart size={15} /> My Wishlist
                   </button>

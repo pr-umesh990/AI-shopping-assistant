@@ -12,6 +12,10 @@ import ComparePage from './pages/ComparePage.jsx'
 import WishlistPage from './pages/WishlistPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
+import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout.jsx'
@@ -63,6 +67,10 @@ const App = () => (
                 <Route path="/wishlist" element={
                   <ProtectedRoute><WishlistPage /></ProtectedRoute>
                 } />
+                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
