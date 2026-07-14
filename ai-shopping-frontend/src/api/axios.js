@@ -97,24 +97,27 @@ export const getTrafficChannels = () => axios.get('/admin/analytics/traffic-chan
 export const getAffiliateMilestone = () => axios.get('/admin/analytics/affiliate-milestone')
 export const exportReport = (params) => axios.get('/admin/reports/export', { params, responseType: 'blob' })
 
-export const getAdminCategories = (params) => axios.get('/admin/categories', { params })
+export const getAdminCategories  = (params) => axios.get('/admin/categories', { params })
 export const createAdminCategory = (data) => axios.post('/admin/categories', data)
 export const updateAdminCategory = (id, data) => axios.put(`/admin/categories/${id}`, data)
 export const deleteAdminCategory = (id) => axios.delete(`/admin/categories/${id}`)
 
 //Subcategories (public)
-export const getSubcategories = (categoryId) =>
-  axios.get('/subcategories', { params: { categoryId } })
+export const getSubcategories = (categoryId) => axios.get('/subcategories', { params: { categoryId } })
 export const getSubcategory = (id) => axios.get(`/subcategories/${id}`)
 
 //subcategories (admin)
-export const getAdminSubcategories = (categoryId) =>
-  axios.get('/admin/subcategories', { params: { categoryId } })
-export const createAdminSubcategory = (data) =>
-  axios.post('/admin/subcategories', data)
-export const updateAdminSubcategory = (id, data) =>
-  axios.put(`/admin/subcategories/${id}`, data)
-export const deleteAdminSubcategory = (id) =>
-  axios.delete(`/admin/subcategories/${id}`)
+export const getAdminSubcategories  = (categoryId) => axios.get('/admin/subcategories', { params: { categoryId } })
+export const createAdminSubcategory = (data) => axios.post('/admin/subcategories', data)
+export const updateAdminSubcategory = (id, data) => axios.put(`/admin/subcategories/${id}`, data)
+export const deleteAdminSubcategory = (id) => axios.delete(`/admin/subcategories/${id}`)
+
+// Reviews
+export const getProductReviews = (productId, params) => axios.get(`/reviews/${productId}`, { params })
+export const createReview = (productId, data) => axios.post(`/reviews/${productId}`, data)
+export const updateReview = (productId, data) => axios.put(`/reviews/${productId}`, data)
+export const deleteReview = (productId) => axios.delete(`/reviews/${productId}`)
+export const markReviewHelpful = (reviewId) => axios.patch(`/reviews/${reviewId}/helpful`)
+export const getMyReview = (productId) => axios.get(`/reviews/${productId}/my-review`)
 
 export default axios

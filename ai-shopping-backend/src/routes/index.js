@@ -9,6 +9,7 @@ import wishlistRoutes from './wishlist.routes.js';
 import affiliateRoutes from './affiliate.routes.js';
 import newsletterRoutes from './newsletter.routes.js';
 import adminRoutes from './admin.routes.js';
+import reviewRoutes from './review.routes.js';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use('/compare', compareRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/affiliate', affiliateRoutes);
 router.use('/newsletter', newsletterRoutes);
+router.use('/reviews', reviewRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

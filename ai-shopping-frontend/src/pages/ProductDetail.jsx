@@ -11,6 +11,10 @@ import AlternativesRow from '../components/product/AlternativesRow.jsx'
 import AIBadge from '../components/common/AIBadge.jsx'
 import StarRating from '../components/common/StarRating.jsx'
 import ComparisonTray from '../components/search/ComparisonTray.jsx'
+import ReviewSection from '../components/product/ReviewSection.jsx'
+import ShareButton from '../components/product/ShareButton.jsx'
+import RecentlyViewed from '../components/product/RecentlyViewed.jsx'
+import { useRecentlyViewed } from '../hooks/useRecentlyViewed.js'
 import { getProduct, getPriceHistory, getAiReview, getAlternatives, addToWishlist, trackAffiliateClick } from '../api/axios.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useCompare } from '../hooks/useCompare.js'
@@ -22,6 +26,7 @@ const ProductDetail = () => {
   const { isAuthenticated } = useAuth()
   const { add: addCompare } = useCompare()
   const { items: wishlistItems, addToWishlistLocal } = useWishlist()
+  const { addItem: addRecentlyViewed } = useRecentlyViewed()
   const [product, setProduct] = useState(null)
   const [history, setHistory] = useState([])
   const [review, setReview] = useState(null)
@@ -37,7 +42,9 @@ const ProductDetail = () => {
       getAiReview(id).catch(() => null),
       getAlternatives(id).catch(() => null),
     ]).then(([pRes, hRes, rRes, aRes]) => {
-      setProduct(pRes.data?.data?.product || null)
+      const loadedProduct = pRes.data?.data?.product || null
+      setProduct(loadedProduct)
+      if (loadedProduct) addRecentlyViewed(loadedProduct)
       setHistory(hRes.data?.data?.history || [])
       setReview(rRes?.data?.data?.review || null)
       setAlternatives(aRes?.data?.data?.alternatives || [])
@@ -180,6 +187,9 @@ const ProductDetail = () => {
                   Compare
                 </button>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <ShareButton product={product} />
+              </div>
             </div>
 
             {/* Tags */}
@@ -209,6 +219,14 @@ const ProductDetail = () => {
           <PriceHistoryChart history={history} currentPrice={product.currentPrice} />
 
           {alternatives.length > 0 && <AlternativesRow alternatives={alternatives} />}
+
+          <ReviewSection
+            productId={product._id}
+            productRating={product.rating}
+            productReviewCount={product.reviewCount}
+          />
+
+          <RecentlyViewed excludeId={product._id} />
         </div>
       </div>
 
