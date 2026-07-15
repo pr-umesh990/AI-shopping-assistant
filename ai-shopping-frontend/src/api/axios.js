@@ -120,4 +120,7 @@ export const deleteReview = (productId) => axios.delete(`/reviews/${productId}`)
 export const markReviewHelpful = (reviewId) => axios.patch(`/reviews/${reviewId}/helpful`)
 export const getMyReview = (productId) => axios.get(`/reviews/${productId}/my-review`)
 
+// Search filters
+export const getFilterOptions = (params) => axios.get('/search/filter-options', { params })
+
 export default axios

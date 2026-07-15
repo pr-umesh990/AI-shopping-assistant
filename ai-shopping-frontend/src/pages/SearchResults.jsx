@@ -40,6 +40,11 @@ const SearchResults = () => {
   const { items: compareItems } = useCompare()
   const isMountRef = useRef(true)
 
+  // Load More state
+  const [allProducts, setAllProducts] = useState([])
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [viewMode, setViewMode] = useState('pagination') // 'pagination' | 'loadmore'
+
   const doSearch = useCallback(async (query, pg, currentFilters, sortBy) => {
     if (!query) return
     setLoading(true)
@@ -54,6 +59,8 @@ const SearchResults = () => {
       console.log("Search results:", res);
       const data = res.data?.data
       setProducts(data?.results || [])
+      // Reset allProducts on fresh search
+      setAllProducts(data?.results || [])
       setInterpretation(data?.interpretation || null)
       setPagination(data?.pagination || null)
     } catch (err) {
@@ -63,8 +70,33 @@ const SearchResults = () => {
     }
   }, [])
 
+  const loadMore = useCallback(async () => {
+    if (!pagination?.hasNext || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const res = await searchProducts({
+        query: q,
+        page: page + 1,
+        limit: 12,
+        sort,
+        ...filters,
+      })
+      const data = res.data?.data
+      const newProducts = data?.results || []
+      setAllProducts(prev => [...prev, ...newProducts])
+      setProducts(newProducts)
+      setPagination(data?.pagination || null)
+      setPage(prev => prev + 1)
+    } catch {
+      toast.error('Could not load more products.')
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [pagination, loadingMore, q, page, sort, filters])
+
   useEffect(() => {
     setPage(1)
+    setAllProducts([])
     doSearch(q, 1, filters, sort)
   }, [q])
 
@@ -79,6 +111,7 @@ const SearchResults = () => {
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters)
     setPage(1)
+    setAllProducts([])
     doSearch(q, 1, newFilters, sort)
   }
 
@@ -130,15 +163,30 @@ const SearchResults = () => {
                     <List size={15} />
                   </button>
                 </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{
+                    fontSize: '0.78rem',
+                    border: '1px solid var(--gray-200)',
+                    padding: '0.3rem 0.65rem',
+                  }}
+                  onClick={() => {
+                    setViewMode(v => v === 'pagination' ? 'loadmore' : 'pagination')
+                    setAllProducts(products)
+                  }}
+                  title="Toggle between pagination and Load More"
+                >
+                  {viewMode === 'pagination' ? '↓ Load More Mode' : '# Page Mode'}
+                </button>
               </div>
             </div>
 
             {loading ? (
               <SkeletonGrid />
-            ) : products.length > 0 ? (
+            ) : (viewMode === 'loadmore' ? allProducts : products).length > 0 ? (
               <>
                 <div className={view === 'grid' ? 'products-grid' : 'products-list'}>
-                  {products.map(p => (
+                  {(viewMode === 'loadmore' ? allProducts : products).map(p => (
                     <ProductCard
                       key={p._id}
                       product={p}
@@ -148,7 +196,37 @@ const SearchResults = () => {
                     />
                   ))}
                 </div>
-                <Pagination pagination={pagination} onPageChange={setPage} />
+
+                {viewMode === 'pagination' ? (
+                  <Pagination pagination={pagination} onPageChange={(newPage) => {
+                    setPage(newPage)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }} />
+                ) : (
+                  <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                    {pagination?.hasNext ? (
+                      <button
+                        className="btn btn-secondary"
+                        style={{ minWidth: 160, padding: '0.65rem 1.5rem' }}
+                        onClick={loadMore}
+                        disabled={loadingMore}
+                      >
+                        {loadingMore ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                            <div style={{ width: 14, height: 14, border: '2px solid var(--gray-300)', borderTop: '2px solid var(--primary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                            Loading…
+                          </span>
+                        ) : (
+                          `Load More (${pagination.total - allProducts.length} remaining)`
+                        )}
+                      </button>
+                    ) : allProducts.length > 0 ? (
+                      <p style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>
+                        All {allProducts.length} results loaded ✓
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </>
             ) : q ? (
               <EmptyState

@@ -193,3 +193,57 @@ export const getSuggestions = asyncHandler(async (req, res) => {
 
   return successResponse(res, 200, 'Suggestions.', { suggestions });
 });
+
+/**
+ * @route   GET /api/v1/search/filter-options
+ * @desc    Get available filter options (brands, price range) from active products
+ * @query   category (slug, optional) — scope filters to a category
+ */
+export const getFilterOptions = asyncHandler(async (req, res) => {
+  const { category } = req.query
+
+  const matchStage = { status: 'active' }
+
+  // If category slug provided, scope to that category
+  if (category) {
+    const cat = await Category.findOne({ slug: category }).select('_id').lean()
+    if (cat) {
+      matchStage.categoryId = cat._id
+    }
+  }
+
+  const [brandsResult, priceResult] = await Promise.all([
+    // Distinct brands sorted alphabetically
+    Product.aggregate([
+      { $match: matchStage },
+      { $group: { _id: '$brand' } },
+      { $sort: { _id: 1 } },
+      { $limit: 50 },
+      { $project: { _id: 0, brand: '$_id' } },
+    ]),
+    // Min and max price
+    Product.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: '$currentPrice' },
+          maxPrice: { $max: '$currentPrice' },
+        },
+      },
+    ]),
+  ])
+
+  const brands = brandsResult.map(b => b.brand).filter(Boolean)
+  const priceRange = {
+    min: priceResult[0]?.minPrice ? Math.floor(priceResult[0].minPrice) : 0,
+    max: priceResult[0]?.maxPrice ? Math.ceil(priceResult[0].maxPrice) : 10000,
+  }
+
+  return successResponse(res, 200, 'Filter options retrieved.', {
+    brands,
+    priceRange,
+    ratings: [4, 3, 2],
+  })
+})
+
