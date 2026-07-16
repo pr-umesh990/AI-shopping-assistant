@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import Navbar from './components/layout/Navbar.jsx'
 import ProtectedRoute from './components/common/ProtectedRoute.jsx'
 import ErrorBoundary from './components/common/ErrorBoundary.jsx'
+import PWAInstallBanner from './components/common/PWAInstallBanner.jsx'
 
 // Pages
 import Home from './pages/Home.jsx'
@@ -73,6 +74,7 @@ const App = () => (
         />
       </Routes>
 
+      <PWAInstallBanner />
       <Toaster
         position="top-right"
         toastOptions={{

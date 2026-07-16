@@ -12,6 +12,10 @@ import {
   getRevenueByCategory,
   getTrafficChannels,
   getAffiliateMilestone,
+  getSearchTrends,
+  getUserRegistrations,
+  getMostWishlisted,
+  getProductsOverTime,
   exportReport,
 } from '../controllers/admin/analytics.controller.js';
 import {
@@ -59,6 +63,10 @@ router.delete('/subcategories/:id', deleteSubcategory);
 router.get('/analytics/revenue-by-category', getRevenueByCategory);
 router.get('/analytics/traffic-channels', getTrafficChannels);
 router.get('/analytics/affiliate-milestone', getAffiliateMilestone);
+router.get('/analytics/search-trends', getSearchTrends);
+router.get('/analytics/user-registrations', getUserRegistrations);
+router.get('/analytics/most-wishlisted', getMostWishlisted);
+router.get('/analytics/products-over-time', getProductsOverTime);
 
 // Reports
 router.get('/reports/export', exportReport);

@@ -123,4 +123,10 @@ export const getMyReview = (productId) => axios.get(`/reviews/${productId}/my-re
 // Search filters
 export const getFilterOptions = (params) => axios.get('/search/filter-options', { params })
 
+// Admin Analytics — new endpoints
+export const getSearchTrends = () => axios.get('/admin/analytics/search-trends')
+export const getUserRegistrations = () => axios.get('/admin/analytics/user-registrations')
+export const getMostWishlisted = () => axios.get('/admin/analytics/most-wishlisted')
+export const getProductsOverTime = () => axios.get('/admin/analytics/products-over-time')
+
 export default axios
